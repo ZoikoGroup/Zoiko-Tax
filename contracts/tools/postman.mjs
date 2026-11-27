@@ -99,7 +99,7 @@ const FOLDERS = [
   {
     name: "04 · Administration",
     description:
-      "Runs in order: list, create, grant, disable, then read the sessions and the audit trail, then undo. `createUser` captures the new user's id into `userId`, so the requests after it act on something that exists.\n\nThen webhooks: `createWebhook` subscribes an endpoint and captures `webhookId`; the secret is shown once and asserted to be in the Standard Webhooks form. A fresh run has delivered nothing, so the delivery read and replay answer `404` for the example delivery id, and the run ends by pausing the webhook. The local stack sets `ZTAX_WEBHOOK_KEY_REF`; a cell without one answers `503`.\n\nLast, period seals: `sealPeriod` seals the example day and captures `sealId`, then the seal is read with its signed payload and verified. A cell with no seal keyring answers `503`, one with a keyring and no signer refuses the seal with `503`, and a period sealed already answers `409`.\n\nThen retention: `recordRetentionPolicy` records the next version of the example policy, so each run adds one. `placeLegalHold` places a hold on the example line and captures `holdId`; the hold is read, its scope widened and then released, which is final — the next run places a new one. Each hold read is written to the audit trail as privileged evidence access. `getDecisionRetention` asks for the verdict on `{{decisionId}}`, which this folder has not made, so it answers `404`.\n\nLast, legal authorization: the matrix the cell loaded is read — the local stack mounts the development one, a draft — then `grantAuthorization` records a filing mandate for the tenant's default legal entity and captures `authorizationId`. `checkAuthorization` asks whether September may be filed with the authority under it, and `revokeAuthorization` revokes it, after which the same check would be blocked. Then payee master data: `createBeneficiary` records an authority's payee details and captures `beneficiaryId`; the same administrator verifying them is refused with `MAKER_CHECKER` (ZTAX-REM-REQ-0014), and the version is suspended. Then support: `openSupportCase` opens a LEGAL case and captures `caseId`; the queue and the case are read, and `actOnSupportCase` verifies the requester, which moves the case to `VERIFIED` as one more event in its history. Then a migration: `createMigrationProgram` creates a program for 2025 and captures `migrationProgramId`; a snapshot of two historical results is registered, a mapping that names only one of their legacy codes is recorded, and `executeMigrationRun` converts the snapshot AS_KNOWN — one record converts, the other raises an `UNMAPPED_CODE` exception, captured into `migrationExceptionId`, and the monetary reconciliation does not pass. The exception is accepted as a known residual and the cutover moves to `PRECHECK`.\n\nLast, the dashboard: `getDashboard` reads the Tax Command Center for the current month. It needs `OPERATOR`, `ANALYST` or `AUDITOR`; the local stack grants its bootstrap administrator `ANALYST` for exactly this, and a cell that does not answers `403`.",
+      "Runs in order: list, create, grant, disable, then read the sessions and the audit trail, then undo. `createUser` captures the new user's id into `userId`, so the requests after it act on something that exists.\n\nThen webhooks: `createWebhook` subscribes an endpoint and captures `webhookId`; the secret is shown once and asserted to be in the Standard Webhooks form. A fresh run has delivered nothing, so the delivery read and replay answer `404` for the example delivery id, and the run ends by pausing the webhook. The local stack sets `ZTAX_WEBHOOK_KEY_REF`; a cell without one answers `503`.\n\nLast, period seals: `sealPeriod` seals the example day and captures `sealId`, then the seal is read with its signed payload and verified. A cell with no seal keyring answers `503`, one with a keyring and no signer refuses the seal with `503`, and a period sealed already answers `409`.\n\nThen retention: `recordRetentionPolicy` records the next version of the example policy, so each run adds one. `placeLegalHold` places a hold on the example line and captures `holdId`; the hold is read, its scope widened and then released, which is final — the next run places a new one. Each hold read is written to the audit trail as privileged evidence access. `getDecisionRetention` asks for the verdict on `{{decisionId}}`, which this folder has not made, so it answers `404`.\n\nLast, legal authorization: the matrix the cell loaded is read — the local stack mounts the development one, a draft — then `grantAuthorization` records a filing mandate for the tenant's default legal entity and captures `authorizationId`. `checkAuthorization` asks whether September may be filed with the authority under it, and `revokeAuthorization` revokes it, after which the same check would be blocked. Then payee master data: `createBeneficiary` records an authority's payee details and captures `beneficiaryId`; the same administrator verifying them is refused with `MAKER_CHECKER` (ZTAX-REM-REQ-0014), and the version is suspended. Then support: `openSupportCase` opens a LEGAL case and captures `caseId`; the queue and the case are read, and `actOnSupportCase` verifies the requester, which moves the case to `VERIFIED` as one more event in its history. Then entitlements: `createEntitlement` records a UK filing right from today, submitted for review, and captures `entitlementId`; the same administrator approving it is refused with `MAKER_CHECKER` (Doc 18 W07), so it stays `PENDING`. `proposeSubscriptionPlan` proposes a plan and captures `planId`, and its proposer approving it is refused the same way. `getUsage` counts the month from the cell's own records, exact integers with a basis digest each, and `getUsageBasis` lists the rows one meter counted. Then a migration: `createMigrationProgram` creates a program for 2025 and captures `migrationProgramId`; a snapshot of two historical results is registered, a mapping that names only one of their legacy codes is recorded, and `executeMigrationRun` converts the snapshot AS_KNOWN — one record converts, the other raises an `UNMAPPED_CODE` exception, captured into `migrationExceptionId`, and the monetary reconciliation does not pass. The exception is accepted as a known residual and the cutover moves to `PRECHECK`.\n\nLast, the dashboard: `getDashboard` reads the Tax Command Center for the current month. It needs `OPERATOR`, `ANALYST` or `AUDITOR`; the local stack grants its bootstrap administrator `ANALYST` for exactly this, and a cell that does not answers `403`.",
     operations: [
       "listUsers",
       "createUser",
@@ -144,6 +144,16 @@ const FOLDERS = [
       "listSupportCases",
       "getSupportCase",
       "actOnSupportCase",
+      "listEntitlements",
+      "createEntitlement",
+      "getEntitlement",
+      "actOnEntitlement",
+      "listSubscriptionPlans",
+      "proposeSubscriptionPlan",
+      "getSubscriptionPlan",
+      "actOnSubscriptionPlan",
+      "getUsage",
+      "getUsageBasis",
       "listMigrationPrograms",
       "createMigrationProgram",
       "registerMigrationSnapshot",
@@ -219,11 +229,22 @@ const FOLDERS = [
       "receiveExemptionCertificate", "listExemptionCertificates", "getExemptionCertificate",
       "addExemptionCertificateVersion", "screenExemptionCertificate", "recommendExemptionCertificate",
       "decideExemptionCertificate", "transitionExemptionCertificate",
+      "createCrosswalk", "listCrosswalks", "getCrosswalk", "addCrosswalkVersion", "transitionCrosswalkVersion",
+      "lookupCrosswalk", "proposeRuleChange", "listRuleChanges", "getRuleChange", "recordRuleChangeTestEvidence",
+      "transitionRuleChange",
+      "recordRegulatoryChange", "listRegulatoryChanges", "getRegulatoryChange", "transitionRegulatoryChange",
+      "assessRegulatoryChange", "listImpactAssessments", "getImpactAssessment", "draftReviewRecommendation",
+      "listReviewRecommendations", "getReviewRecommendation", "reviseReviewRecommendation",
+      "recommendReviewRecommendation", "reviewReviewRecommendation", "withdrawReviewRecommendation",
       "createERPBridge", "listERPBridges", "recordERPMapping", "prepareERPExport", "listERPExports", "getERPExport",
       "dispatchERPExport", "recordERPResponse", "withdrawERPExport", "recordGLSnapshot", "listGLSnapshots",
       "runGLReconciliation", "listGLReconciliations",
       "createComparator", "listComparators", "executeShadowRun", "listShadowRuns", "getShadowRun", "moveDiscrepancy",
       "issueDocument", "getDocument", "correctDocument", "getDocumentLineage", "listDocuments",
+      "createCTCApplicability", "getCTCApplicability", "listCTCApplicability", "reviseCTCApplicability",
+      "addCTCApplicabilityEvidence", "signCTCApplicabilityGate", "transitionCTCApplicability", "resolveCTCApplicability",
+      "validateCTCDocument", "listCTCValidations", "getCTCValidation", "prepareCTCSubmission", "listCTCSubmissions",
+      "getCTCSubmission", "dispatchCTCSubmission", "recordCTCResponse", "withdrawCTCSubmission",
       "adjustTransaction", "refundTransaction", "getRefund", "reportRefund", "listRefunds", "proposeClassification",
       "recordClassificationDecision", "getClassificationDecision",
       "submitBatch", "getJob", "listJobs", "getDecisionInclusion",
@@ -295,6 +316,11 @@ const VALUE_VARIABLES = {
   "01920b40-1a2b-7c3d-8e4f-5a6b7c8d9e01": "{{comparatorId}}",
   "01920b50-1a2b-7c3d-8e4f-5a6b7c8d9e01": "{{shadowRunId}}",
   "01920b60-1a2b-7c3d-8e4f-5a6b7c8d9e01": "{{discrepancyId}}",
+  // The entitlement and plan examples' ids, and their start date: what
+  // folder 04 just recorded, from today.
+  "01920e10-1a2b-7c3d-8e4f-5a6b7c8d9e01": "{{entitlementId}}",
+  "01920e20-1a2b-7c3d-8e4f-5a6b7c8d9e01": "{{planId}}",
+  "2026-11-20": "{{today}}",
   // The migration examples' ids: what folder 04 just made.
   "01920b70-1a2b-7c3d-8e4f-5a6b7c8d9e01": "{{migrationProgramId}}",
   "01920b71-1a2b-7c3d-8e4f-5a6b7c8d9e01": "{{migrationSnapshotId}}",
@@ -311,6 +337,8 @@ const VALUE_VARIABLES = {
   "01920a80-1a2b-7c3d-8e4f-5a6b7c8d9e0f": "{{sealId}}",
   // The document examples' id: the invoice the folder just issued.
   "01920a90-1a2b-7c3d-8e4f-5a6b7c8d9e0f": "{{documentId}}",
+  // The CTC applicability examples' id: the record folder 06 just made.
+  "01920e10-1a2b-7c3d-8e4f-5a6b7c8d9e01": "{{applicabilityId}}",
   // The reconciliation examples' run id: the run the folder just made.
   "01920ab0-1a2b-7c3d-8e4f-5a6b7c8d9e0f": "{{runId}}",
   // The job example's id: the batch the folder just queued.
@@ -548,6 +576,66 @@ const OPERATION_TESTS = {
     "  pm.expect(pm.response.json().latestBuild.inputsHash).to.match(/^zt1:[0-9a-f]{64}$/);",
     "});",
   ],
+  createCrosswalk: [
+    "pm.test('Doc 02 WF-06 — a crosswalk version is written in review, never approved; or the vendor release is already mapped', function () {",
+    "  pm.expect([200, 201, 409]).to.include(pm.response.code);",
+    "  if (pm.response.code !== 409) { pm.expect(pm.response.json().advisoryOnly).to.eql(true); pm.expect(pm.response.json().versions[0].status).to.eql('IN_REVIEW'); }",
+    "});",
+  ],
+  listCrosswalks: [
+    "pm.test('Doc 02 §02 — every crosswalk is advisory only', function () {",
+    "  pm.response.to.have.status(200);",
+    "  pm.response.json().crosswalks.forEach(function (c) { pm.expect(c.advisoryOnly).to.eql(true); });",
+    "});",
+    "const xws = pm.response.json().crosswalks;",
+    "if (xws.length > 0) { pm.collectionVariables.set('crosswalkId', xws[0].id); }",
+  ],
+  proposeRuleChange: [
+    "pm.test('WF-02 — a proposed rule change is PROPOSED and not release-eligible', function () {",
+    "  pm.expect([200, 201]).to.include(pm.response.code);",
+    "  pm.expect(pm.response.json().status).to.eql('PROPOSED');",
+    "  pm.expect(pm.response.json().releaseEligible).to.eql(false);",
+    "});",
+    "pm.collectionVariables.set('changeId', pm.response.json().id);",
+  ],
+  createEntitlement: [
+    "pm.test('Doc 18 §07 — a grant is recorded for review, never approved: it is PENDING with a reason', function () {",
+    "  pm.expect([200, 201]).to.include(pm.response.code);",
+    "  pm.expect(pm.response.json().lifecycle).to.eql('IN_REVIEW');",
+    "  pm.expect(pm.response.json().effective).to.eql('PENDING');",
+    "  pm.expect(pm.response.json().findings[0].reason).to.eql('AWAITING_SECOND_APPROVAL');",
+    "});",
+    "pm.collectionVariables.set('entitlementId', pm.response.json().id);",
+  ],
+  actOnEntitlement: [
+    "pm.test('Doc 18 W07 — the submitter cannot approve their own grant', function () {",
+    "  pm.response.to.have.status(403);",
+    "  pm.expect(pm.response.json().ztx_reason_code).to.eql('MAKER_CHECKER');",
+    "});",
+  ],
+  proposeSubscriptionPlan: [
+    "pm.test('Doc 18 W04 — a plan is proposed, not in force', function () {",
+    "  pm.expect([200, 201]).to.include(pm.response.code);",
+    "  pm.expect(pm.response.json().status).to.eql('PROPOSED');",
+    "  pm.expect(pm.response.json().inForce).to.eql(false);",
+    "});",
+    "pm.collectionVariables.set('planId', pm.response.json().id);",
+  ],
+  actOnSubscriptionPlan: [
+    "pm.test('the proposer cannot approve their own plan', function () {",
+    "  pm.response.to.have.status(403);",
+    "  pm.expect(pm.response.json().ztx_reason_code).to.eql('MAKER_CHECKER');",
+    "});",
+  ],
+  getUsage: [
+    "pm.test('Doc 18 W09 — usage is exact counts, each with its basis digest', function () {",
+    "  pm.response.to.have.status(200);",
+    "  pm.response.json().lines.forEach(function (l) {",
+    "    pm.expect(Number.isInteger(l.count)).to.eql(true);",
+    "    pm.expect(l.basisDigest).to.match(/^[0-9a-f]{64}$/);",
+    "  });",
+    "});",
+  ],
   createRegistration: [
     "pm.test('Doc 17 ER-014 — a submitted registration is SUBMITTED, never ACTIVE; or the number is already recorded', function () {",
     "  pm.expect([200, 201, 409]).to.include(pm.response.code);",
@@ -562,6 +650,13 @@ const OPERATION_TESTS = {
     "const regs = pm.response.json().registrations;",
     "if (regs.length > 0) { pm.collectionVariables.set('registrationId', regs[0].id); }",
   ],
+  recordRegulatoryChange: [
+    "pm.test('Doc 03 WF-05 — a reported change is recorded, or found already recorded for its source edition', function () {",
+    "  pm.expect([200, 201]).to.include(pm.response.code);",
+    "  pm.expect(pm.response.json().sourceKey).to.match(/^zt1:/);",
+    "});",
+    "pm.collectionVariables.set('changeId', pm.response.json().id);",
+  ],
   receiveExemptionCertificate: [
     "pm.test('Doc 17 EER-09 — a received certificate is SUBMITTED evidence version 1, not approved', function () {",
     "  pm.expect([200, 201]).to.include(pm.response.code);",
@@ -569,6 +664,14 @@ const OPERATION_TESTS = {
     "  pm.expect(pm.response.json().inForce).to.eql(false);",
     "});",
     "pm.collectionVariables.set('certificateId', pm.response.json().id);",
+  ],
+  createCTCApplicability: [
+    "pm.test('Doc 21 W01 — a new applicability record decides nothing until activated', function () {",
+    "  pm.response.to.have.status(201);",
+    "  pm.expect(pm.response.json().status).to.eql('DRAFT');",
+    "  pm.expect(pm.response.json().missingGates.length).to.eql(5);",
+    "});",
+    "pm.collectionVariables.set('applicabilityId', pm.response.json().id);",
   ],
   createERPBridge: [
     "pm.test('the bridge is recorded with no mapping yet', function () {",
@@ -1074,6 +1177,16 @@ const ACCEPTED_OUTCOMES = {
   // find it already recorded. Its example document is the one recorded with
   // it, and folder 06 runs as an OPERATOR, while checks, activation,
   // screening, recommendation, decision and suspension are an ANALYST's.
+  // The example crosswalk is written by the first run; later runs find the
+  // vendor release already mapped, and its first version still in review, so
+  // no second version opens. Folder 06 runs as an OPERATOR, and review is an
+  // ANALYST's. The example proposal is created with its test evidence, so
+  // attaching more against revision 1 is stale.
+  createCrosswalk: ["409"],
+  addCrosswalkVersion: ["409"],
+  transitionCrosswalkVersion: ["403"],
+  recordRuleChangeTestEvidence: ["409"],
+  transitionRuleChange: ["403"],
   createRegistration: ["409"],
   recordRegistrationAttachment: ["409"],
   recordRegistrationCheck: ["403"],
@@ -1082,6 +1195,19 @@ const ACCEPTED_OUTCOMES = {
   recommendExemptionCertificate: ["403"],
   decideExemptionCertificate: ["403"],
   transitionExemptionCertificate: ["403"],
+  // Regulatory change intelligence: folder 06 runs as an OPERATOR, which
+  // records and reads changes; triage, assessment, drafting, recommending
+  // and review are an ANALYST's. The example assessment and recommendation
+  // ids are nothing's.
+  transitionRegulatoryChange: ["403"],
+  assessRegulatoryChange: ["403"],
+  getImpactAssessment: ["404"],
+  draftReviewRecommendation: ["403"],
+  getReviewRecommendation: ["404"],
+  reviseReviewRecommendation: ["403"],
+  recommendReviewRecommendation: ["403"],
+  reviewReviewRecommendation: ["403"],
+  withdrawReviewRecommendation: ["403"],
   // Folder 06 may post nothing in the example period and currency, so a
   // prepare can find nothing to export and the batch reads then name the
   // example batch. One OPERATOR prepares, so its dispatch is refused (the
@@ -1094,6 +1220,20 @@ const ACCEPTED_OUTCOMES = {
   recordERPResponse: ["404"],
   withdrawERPExport: ["404"],
   moveDiscrepancy: ["404"],
+  // Folder 06 runs as one OPERATOR, the creator of its applicability record:
+  // gate sign-off and activation are another ANALYST's, so the record stays
+  // DRAFT, nothing is validated or prepared under it, and the example
+  // validation, submission and attempt were never made. The document reads
+  // name the invoice the folder issued, absent when determination is not run.
+  signCTCApplicabilityGate: ["403"],
+  transitionCTCApplicability: ["403"],
+  validateCTCDocument: ["404", "409"],
+  getCTCValidation: ["404"],
+  prepareCTCSubmission: ["404", "409"],
+  getCTCSubmission: ["404"],
+  dispatchCTCSubmission: ["404"],
+  recordCTCResponse: ["404"],
+  withdrawCTCSubmission: ["404"],
 };
 
 /** The statuses an operation declares, for the generated status assertion. */
@@ -1416,12 +1556,33 @@ function variables(overlay, contractDigest, local) {
     { key: "duty", value: "", type: "string" },
     // Captured by listRegistrations and receiveExemptionCertificate; the
     // registration and certificate filters are empty so they list everything.
+    // Captured by listCrosswalks and proposeRuleChange. The crosswalk
+    // version is the first; the lookup is of the example code, today, in the
+    // version in use. The queue and library filters are empty.
+    { key: "crosswalkId", value: "", type: "string" },
+    { key: "version", value: "1", type: "string" },
+    { key: "code", value: "010101", type: "string" },
+    { key: "on", value: "", type: "string" },
+    { key: "atVersion", value: "", type: "string" },
+    { key: "vendor", value: "", type: "string" },
+    { key: "packId", value: "", type: "string" },
+    { key: "changeId", value: "", type: "string" },
     { key: "registrationId", value: "", type: "string" },
     { key: "certificateId", value: "", type: "string" },
     { key: "scheme", value: "", type: "string" },
     { key: "jurisdiction", value: "", type: "string" },
     { key: "flag", value: "", type: "string" },
     { key: "buyerRef", value: "", type: "string" },
+    // Captured by recordRegulatoryChange. Assessments and recommendations are
+    // an ANALYST's, so their ids default to well-formed ids of nothing; the
+    // listing filters are empty so they list everything.
+    { key: "changeId", value: "", type: "string" },
+    { key: "assessmentId", value: "00000000-0000-7000-8000-000000000000", type: "string" },
+    { key: "recommendationId", value: "00000000-0000-7000-8000-000000000000", type: "string" },
+    { key: "kind", value: "", type: "string" },
+    { key: "priority", value: "", type: "string" },
+    { key: "minSeverity", value: "", type: "string" },
+    { key: "origin", value: "", type: "string" },
     // Captured by createERPBridge, prepareERPExport and recordGLSnapshot; the
     // batch defaults to one that does not exist, for a prepare that found
     // nothing to export. The currency filter is empty, so it lists all.

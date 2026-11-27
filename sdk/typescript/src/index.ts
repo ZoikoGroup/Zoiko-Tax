@@ -856,6 +856,92 @@ export class ZoikoTaxClient {
     return this.#send<S<"GLReconciliation">>("POST", `/v1/erp-bridges/${encodeURIComponent(bridgeId)}/gl-reconciliations`, body, signal);
   }
 
+  // --- e-invoicing / CTC (Doc 21) -------------------------------------------
+  /** Country applicability records. `GET /v1/ctc/applicability`. */
+  listCTCApplicability(params: { legalEntityId?: string; country?: string; status?: S<"CTCApplicabilityStatus"> } = {}, signal?: AbortSignal): Promise<Result<S<"CTCApplicabilityList">>> {
+    return this.#send<S<"CTCApplicabilityList">>("GET", `/v1/ctc/applicability${query(params)}`, undefined, signal);
+  }
+
+  /** Record a country applicability record, in DRAFT. `POST /v1/ctc/applicability`. */
+  createCTCApplicability(body: S<"CTCApplicabilityRequest">, signal?: AbortSignal): Promise<Result<S<"CTCApplicability">>> {
+    return this.#send<S<"CTCApplicability">>("POST", `/v1/ctc/applicability`, body, signal);
+  }
+
+  /** One country applicability record. `GET /v1/ctc/applicability/{applicabilityId}`. */
+  getCTCApplicability(applicabilityId: string, signal?: AbortSignal): Promise<Result<S<"CTCApplicability">>> {
+    return this.#send<S<"CTCApplicability">>("GET", `/v1/ctc/applicability/${encodeURIComponent(applicabilityId)}`, undefined, signal);
+  }
+
+  /** Record the next version of a record's terms. `POST /v1/ctc/applicability/{applicabilityId}/versions`. */
+  reviseCTCApplicability(applicabilityId: string, body: S<"CTCTerms">, signal?: AbortSignal): Promise<Result<S<"CTCApplicability">>> {
+    return this.#send<S<"CTCApplicability">>("POST", `/v1/ctc/applicability/${encodeURIComponent(applicabilityId)}/versions`, body, signal);
+  }
+
+  /** Attach an evidence document by its SHA-256. `POST /v1/ctc/applicability/{applicabilityId}/evidence`. */
+  addCTCApplicabilityEvidence(applicabilityId: string, body: S<"EvidenceDocument">, signal?: AbortSignal): Promise<Result<S<"CTCApplicability">>> {
+    return this.#send<S<"CTCApplicability">>("POST", `/v1/ctc/applicability/${encodeURIComponent(applicabilityId)}/evidence`, body, signal);
+  }
+
+  /** Sign a G0–G4 release gate on a record's version. `POST /v1/ctc/applicability/{applicabilityId}/gates`. */
+  signCTCApplicabilityGate(applicabilityId: string, body: S<"CTCGateRequest">, signal?: AbortSignal): Promise<Result<S<"CTCApplicability">>> {
+    return this.#send<S<"CTCApplicability">>("POST", `/v1/ctc/applicability/${encodeURIComponent(applicabilityId)}/gates`, body, signal);
+  }
+
+  /** Submit, return, activate, suspend, resume or retire a record. `POST /v1/ctc/applicability/{applicabilityId}/transitions`. */
+  transitionCTCApplicability(applicabilityId: string, body: S<"CTCTransitionRequest">, signal?: AbortSignal): Promise<Result<S<"CTCApplicability">>> {
+    return this.#send<S<"CTCApplicability">>("POST", `/v1/ctc/applicability/${encodeURIComponent(applicabilityId)}/transitions`, body, signal);
+  }
+
+  /** What a cell owes on a date; REVIEW_BLOCKED when no active record decides. `GET /v1/ctc/resolution`. */
+  resolveCTCApplicability(params: { legalEntityId?: string; country: string; documentType: S<"CTCDocumentType">; buyerKind: S<"CTCBuyerKind">; date: string }, signal?: AbortSignal): Promise<Result<S<"CTCResolution">>> {
+    return this.#send<S<"CTCResolution">>("GET", `/v1/ctc/resolution${query(params)}`, undefined, signal);
+  }
+
+  /** Format validation reports, newest first. `GET /v1/ctc/validations`. */
+  listCTCValidations(params: { documentId?: string; applicabilityId?: string } = {}, signal?: AbortSignal): Promise<Result<S<"CTCValidationList">>> {
+    return this.#send<S<"CTCValidationList">>("GET", `/v1/ctc/validations${query(params)}`, undefined, signal);
+  }
+
+  /** Validate a fiscal document under a record; 200 with the same report when already made. `POST /v1/ctc/validations`. */
+  validateCTCDocument(body: S<"CTCValidationRequest">, signal?: AbortSignal): Promise<Result<S<"CTCValidation">>> {
+    return this.#send<S<"CTCValidation">>("POST", `/v1/ctc/validations`, body, signal);
+  }
+
+  /** One validation report. `GET /v1/ctc/validations/{validationId}`. */
+  getCTCValidation(validationId: string, signal?: AbortSignal): Promise<Result<S<"CTCValidation">>> {
+    return this.#send<S<"CTCValidation">>("GET", `/v1/ctc/validations/${encodeURIComponent(validationId)}`, undefined, signal);
+  }
+
+  /** Authority submissions, newest first. `GET /v1/ctc/submissions`. */
+  listCTCSubmissions(params: { documentId?: string; applicabilityId?: string; status?: S<"CTCSubmissionStatus"> } = {}, signal?: AbortSignal): Promise<Result<S<"CTCSubmissionList">>> {
+    return this.#send<S<"CTCSubmissionList">>("GET", `/v1/ctc/submissions${query(params)}`, undefined, signal);
+  }
+
+  /** Prepare and seal a submission; 200 with the live one when it exists. `POST /v1/ctc/submissions`. */
+  prepareCTCSubmission(body: S<"CTCSubmissionRequest">, signal?: AbortSignal): Promise<Result<S<"CTCSubmission">>> {
+    return this.#send<S<"CTCSubmission">>("POST", `/v1/ctc/submissions`, body, signal);
+  }
+
+  /** One submission with its events. `GET /v1/ctc/submissions/{submissionId}`. */
+  getCTCSubmission(submissionId: string, signal?: AbortSignal): Promise<Result<S<"CTCSubmission">>> {
+    return this.#send<S<"CTCSubmission">>("GET", `/v1/ctc/submissions/${encodeURIComponent(submissionId)}`, undefined, signal);
+  }
+
+  /** Authorise one dispatch attempt on the reviewed payload digest. `POST /v1/ctc/submissions/{submissionId}/dispatch`. */
+  dispatchCTCSubmission(submissionId: string, body: S<"CTCDispatchRequest">, signal?: AbortSignal): Promise<Result<S<"CTCSubmission">>> {
+    return this.#send<S<"CTCSubmission">>("POST", `/v1/ctc/submissions/${encodeURIComponent(submissionId)}/dispatch`, body, signal);
+  }
+
+  /** Record what the rail or the authority answered. `POST /v1/ctc/submissions/{submissionId}/responses`. */
+  recordCTCResponse(submissionId: string, body: S<"CTCResponseRequest">, signal?: AbortSignal): Promise<Result<S<"CTCSubmission">>> {
+    return this.#send<S<"CTCSubmission">>("POST", `/v1/ctc/submissions/${encodeURIComponent(submissionId)}/responses`, body, signal);
+  }
+
+  /** Withdraw a prepared submission never dispatched. `POST /v1/ctc/submissions/{submissionId}/withdrawal`. */
+  withdrawCTCSubmission(submissionId: string, body: S<"CTCWithdrawalRequest">, signal?: AbortSignal): Promise<Result<S<"CTCSubmission">>> {
+    return this.#send<S<"CTCSubmission">>("POST", `/v1/ctc/submissions/${encodeURIComponent(submissionId)}/withdrawal`, body, signal);
+  }
+
   // --- regulatory notices ---------------------------------------------------
   /**
    * List the regulatory notice register, in working order. `GET /v1/notices`.
@@ -986,6 +1072,62 @@ export class ZoikoTaxClient {
     return this.#send<S<"Workpaper">>("POST", `/v1/workpapers/${encodeURIComponent(workpaperId)}/actions`, body, signal);
   }
 
+  // --- content workbench: vendor crosswalks and rule approvals ---------------
+  /** The vendor crosswalk library. Advisory only. `GET /v1/content/crosswalks`. */
+  listCrosswalks(params: { vendor?: string; status?: string; limit?: number } = {}, signal?: AbortSignal): Promise<Result<S<"CrosswalkList">>> {
+    return this.#send<S<"CrosswalkList">>("GET", `/v1/content/crosswalks${query(params)}`, undefined, signal);
+  }
+
+  /** Write a crosswalk and its first version, a DRAFT or IN_REVIEW. `POST /v1/content/crosswalks`. */
+  createCrosswalk(idempotencyKey: string, body: S<"CrosswalkRequest">, signal?: AbortSignal): Promise<Result<S<"Crosswalk">>> {
+    return this.#send<S<"Crosswalk">>("POST", `/v1/content/crosswalks`, body, signal, { "Idempotency-Key": idempotencyKey });
+  }
+
+  /** One crosswalk with every version. `GET /v1/content/crosswalks/{crosswalkId}`. */
+  getCrosswalk(crosswalkId: string, signal?: AbortSignal): Promise<Result<S<"Crosswalk">>> {
+    return this.#send<S<"Crosswalk">>("GET", `/v1/content/crosswalks/${encodeURIComponent(crosswalkId)}`, undefined, signal);
+  }
+
+  /** Write the next version of a crosswalk. `POST /v1/content/crosswalks/{crosswalkId}/versions`. */
+  addCrosswalkVersion(crosswalkId: string, idempotencyKey: string, body: S<"CrosswalkVersionRequest">, signal?: AbortSignal): Promise<Result<S<"Crosswalk">>> {
+    return this.#send<S<"Crosswalk">>("POST", `/v1/content/crosswalks/${encodeURIComponent(crosswalkId)}/versions`, body, signal, { "Idempotency-Key": idempotencyKey });
+  }
+
+  /** Move one crosswalk version, against the revision read. `POST /v1/content/crosswalks/{crosswalkId}/versions/{version}/transitions`. */
+  transitionCrosswalkVersion(crosswalkId: string, version: number, body: S<"ContentTransitionRequest">, signal?: AbortSignal): Promise<Result<S<"Crosswalk">>> {
+    return this.#send<S<"Crosswalk">>("POST", `/v1/content/crosswalks/${encodeURIComponent(crosswalkId)}/versions/${encodeURIComponent(String(version))}/transitions`, body, signal);
+  }
+
+  /** Translate one external code exactly; advisory only. `GET /v1/content/crosswalks/{crosswalkId}/lookup`. */
+  lookupCrosswalk(crosswalkId: string, params: { code: string; on?: string; atVersion?: number }, signal?: AbortSignal): Promise<Result<S<"CrosswalkLookup">>> {
+    return this.#send<S<"CrosswalkLookup">>("GET", `/v1/content/crosswalks/${encodeURIComponent(crosswalkId)}/lookup${query(params)}`, undefined, signal);
+  }
+
+  /** The rule approval queue. `GET /v1/content/rule-changes`. */
+  listRuleChanges(params: { status?: string; packId?: string; jurisdiction?: string; limit?: number } = {}, signal?: AbortSignal): Promise<Result<S<"RuleChangeList">>> {
+    return this.#send<S<"RuleChangeList">>("GET", `/v1/content/rule-changes${query(params)}`, undefined, signal);
+  }
+
+  /** Propose a rule change for review. `POST /v1/content/rule-changes`. */
+  proposeRuleChange(idempotencyKey: string, body: S<"RuleChangeRequest">, signal?: AbortSignal): Promise<Result<S<"RuleChange">>> {
+    return this.#send<S<"RuleChange">>("POST", `/v1/content/rule-changes`, body, signal, { "Idempotency-Key": idempotencyKey });
+  }
+
+  /** One rule change with its review history. `GET /v1/content/rule-changes/{changeId}`. */
+  getRuleChange(changeId: string, signal?: AbortSignal): Promise<Result<S<"RuleChange">>> {
+    return this.#send<S<"RuleChange">>("GET", `/v1/content/rule-changes/${encodeURIComponent(changeId)}`, undefined, signal);
+  }
+
+  /** Attach test evidence to a PROPOSED change. `POST /v1/content/rule-changes/{changeId}/test-evidence`. */
+  recordRuleChangeTestEvidence(changeId: string, body: S<"RuleChangeTestEvidenceRequest">, signal?: AbortSignal): Promise<Result<S<"RuleChange">>> {
+    return this.#send<S<"RuleChange">>("POST", `/v1/content/rule-changes/${encodeURIComponent(changeId)}/test-evidence`, body, signal);
+  }
+
+  /** Recommend, approve for release, request changes, reject or withdraw. `POST /v1/content/rule-changes/{changeId}/transitions`. */
+  transitionRuleChange(changeId: string, body: S<"RuleChangeTransitionRequest">, signal?: AbortSignal): Promise<Result<S<"RuleChange">>> {
+    return this.#send<S<"RuleChange">>("POST", `/v1/content/rule-changes/${encodeURIComponent(changeId)}/transitions`, body, signal);
+  }
+
   // --- registrations and exemption evidence (Doc 17) --------------------------
   /** List registrations, newest first, numbers masked. `GET /v1/registrations`. */
   listRegistrations(
@@ -1070,6 +1212,90 @@ export class ZoikoTaxClient {
     return this.#send<S<"ExemptionEvidence">>("POST", `/v1/exemptions/${encodeURIComponent(certificateId)}/transitions`, body, signal);
   }
 
+  // --- regulatory change intelligence (Doc 03 WF-05, WF-09; Sidebar WF-02) ---
+  /** The regulatory change feed, newest first. `GET /v1/regulatory-changes`. */
+  listRegulatoryChanges(
+    params: { status?: string; kind?: string; jurisdiction?: string; priority?: string; limit?: number } = {},
+    signal?: AbortSignal,
+  ): Promise<Result<S<"RegulatoryChangeList">>> {
+    return this.#send<S<"RegulatoryChangeList">>("GET", `/v1/regulatory-changes${query(params)}`, undefined, signal);
+  }
+
+  /**
+   * Record a reported change as NEW. A retry under the same key, or the same
+   * source edition's change of the same kind, returns the change already
+   * recorded. `POST /v1/regulatory-changes`.
+   */
+  recordRegulatoryChange(idempotencyKey: string, body: S<"RegulatoryChangeRequest">, signal?: AbortSignal): Promise<Result<S<"RegulatoryChange">>> {
+    return this.#send<S<"RegulatoryChange">>("POST", `/v1/regulatory-changes`, body, signal, { "Idempotency-Key": idempotencyKey });
+  }
+
+  /** One change with its history. `GET /v1/regulatory-changes/{changeId}`. */
+  getRegulatoryChange(changeId: string, signal?: AbortSignal): Promise<Result<S<"RegulatoryChange">>> {
+    return this.#send<S<"RegulatoryChange">>("GET", `/v1/regulatory-changes/${encodeURIComponent(changeId)}`, undefined, signal);
+  }
+
+  /** Triage, hold, resume or decide a change. `POST /v1/regulatory-changes/{changeId}/transitions`. */
+  transitionRegulatoryChange(changeId: string, body: S<"RegulatoryChangeTransitionRequest">, signal?: AbortSignal): Promise<Result<S<"RegulatoryChange">>> {
+    return this.#send<S<"RegulatoryChange">>("POST", `/v1/regulatory-changes/${encodeURIComponent(changeId)}/transitions`, body, signal);
+  }
+
+  /** Run the deterministic impact assessment. `POST /v1/regulatory-changes/{changeId}/assessments`. */
+  assessRegulatoryChange(changeId: string, signal?: AbortSignal): Promise<Result<S<"ImpactAssessment">>> {
+    return this.#send<S<"ImpactAssessment">>("POST", `/v1/regulatory-changes/${encodeURIComponent(changeId)}/assessments`, undefined, signal);
+  }
+
+  /** Impact assessments, newest first. `GET /v1/impact-assessments`. */
+  listImpactAssessments(
+    params: { changeId?: string; minSeverity?: string; limit?: number } = {},
+    signal?: AbortSignal,
+  ): Promise<Result<S<"ImpactAssessmentList">>> {
+    return this.#send<S<"ImpactAssessmentList">>("GET", `/v1/impact-assessments${query(params)}`, undefined, signal);
+  }
+
+  /** One impact assessment. `GET /v1/impact-assessments/{assessmentId}`. */
+  getImpactAssessment(assessmentId: string, signal?: AbortSignal): Promise<Result<S<"ImpactAssessment">>> {
+    return this.#send<S<"ImpactAssessment">>("GET", `/v1/impact-assessments/${encodeURIComponent(assessmentId)}`, undefined, signal);
+  }
+
+  /** Review recommendations, newest first. `GET /v1/review-recommendations`. */
+  listReviewRecommendations(
+    params: { status?: string; changeId?: string; origin?: string; limit?: number } = {},
+    signal?: AbortSignal,
+  ): Promise<Result<S<"ReviewRecommendationList">>> {
+    return this.#send<S<"ReviewRecommendationList">>("GET", `/v1/review-recommendations${query(params)}`, undefined, signal);
+  }
+
+  /** Draft a recommendation on a change's current assessment. `POST /v1/review-recommendations`. */
+  draftReviewRecommendation(idempotencyKey: string, body: S<"ReviewRecommendationRequest">, signal?: AbortSignal): Promise<Result<S<"ReviewRecommendation">>> {
+    return this.#send<S<"ReviewRecommendation">>("POST", `/v1/review-recommendations`, body, signal, { "Idempotency-Key": idempotencyKey });
+  }
+
+  /** One recommendation with its history. `GET /v1/review-recommendations/{recommendationId}`. */
+  getReviewRecommendation(recommendationId: string, signal?: AbortSignal): Promise<Result<S<"ReviewRecommendation">>> {
+    return this.#send<S<"ReviewRecommendation">>("GET", `/v1/review-recommendations/${encodeURIComponent(recommendationId)}`, undefined, signal);
+  }
+
+  /** Revise a draft or a returned recommendation. `POST /v1/review-recommendations/{recommendationId}/revisions`. */
+  reviseReviewRecommendation(recommendationId: string, body: S<"ReviewRecommendationRevisionRequest">, signal?: AbortSignal): Promise<Result<S<"ReviewRecommendation">>> {
+    return this.#send<S<"ReviewRecommendation">>("POST", `/v1/review-recommendations/${encodeURIComponent(recommendationId)}/revisions`, body, signal);
+  }
+
+  /** Recommend a draft for independent review. `POST /v1/review-recommendations/{recommendationId}/recommend`. */
+  recommendReviewRecommendation(recommendationId: string, body: S<"ReviewRecommendationActRequest">, signal?: AbortSignal): Promise<Result<S<"ReviewRecommendation">>> {
+    return this.#send<S<"ReviewRecommendation">>("POST", `/v1/review-recommendations/${encodeURIComponent(recommendationId)}/recommend`, body, signal);
+  }
+
+  /** Independently review a recommendation. `POST /v1/review-recommendations/{recommendationId}/review`. */
+  reviewReviewRecommendation(recommendationId: string, body: S<"ReviewRecommendationReviewRequest">, signal?: AbortSignal): Promise<Result<S<"ReviewRecommendation">>> {
+    return this.#send<S<"ReviewRecommendation">>("POST", `/v1/review-recommendations/${encodeURIComponent(recommendationId)}/review`, body, signal);
+  }
+
+  /** Withdraw an open recommendation. `POST /v1/review-recommendations/{recommendationId}/withdrawal`. */
+  withdrawReviewRecommendation(recommendationId: string, body: S<"ReviewRecommendationActRequest">, signal?: AbortSignal): Promise<Result<S<"ReviewRecommendation">>> {
+    return this.#send<S<"ReviewRecommendation">>("POST", `/v1/review-recommendations/${encodeURIComponent(recommendationId)}/withdrawal`, body, signal);
+  }
+
   // --- shadow ----------------------------------------------------------------
   /** List comparator profiles. `GET /v1/shadow/comparators`. */
   listComparators(signal?: AbortSignal): Promise<Result<S<"ComparatorList">>> {
@@ -1099,6 +1325,64 @@ export class ZoikoTaxClient {
   /** Move a discrepancy's investigation. `POST /v1/shadow/discrepancies/{discrepancyId}/transitions`. */
   moveDiscrepancy(discrepancyId: string, body: S<"DiscrepancyTransitionRequest">, signal?: AbortSignal): Promise<Result<S<"Discrepancy">>> {
     return this.#send<S<"Discrepancy">>("POST", `/v1/shadow/discrepancies/${encodeURIComponent(discrepancyId)}/transitions`, body, signal);
+  }
+
+  // --- entitlements, subscriptions and usage (Doc 18) ------------------------
+  /** The entitlement register, each grant beside the coverage the cell proves. `GET /v1/entitlements`. */
+  listEntitlements(
+    params: { status?: string; effective?: string; legalEntityId?: string; country?: string; mode?: string; operation?: string; mismatch?: "true" | "false"; limit?: number } = {},
+    signal?: AbortSignal,
+  ): Promise<Result<S<"EntitlementList">>> {
+    return this.#send<S<"EntitlementList">>("GET", `/v1/entitlements${query(params)}`, undefined, signal);
+  }
+
+  /**
+   * Record a grant as a DRAFT, or IN_REVIEW with `submit: true` — never
+   * approved. A retry under the same key returns the grant already recorded.
+   * `POST /v1/entitlements`.
+   */
+  createEntitlement(idempotencyKey: string, body: S<"EntitlementRequest">, signal?: AbortSignal): Promise<Result<S<"Entitlement">>> {
+    return this.#send<S<"Entitlement">>("POST", `/v1/entitlements`, body, signal, { "Idempotency-Key": idempotencyKey });
+  }
+
+  /** One grant, its coverage and its history. `GET /v1/entitlements/{entitlementId}`. */
+  getEntitlement(entitlementId: string, signal?: AbortSignal): Promise<Result<S<"Entitlement">>> {
+    return this.#send<S<"Entitlement">>("GET", `/v1/entitlements/${encodeURIComponent(entitlementId)}`, undefined, signal);
+  }
+
+  /** Submit, approve, reject, withdraw, suspend, resume or revoke a grant. `POST /v1/entitlements/{entitlementId}/actions`. */
+  actOnEntitlement(entitlementId: string, body: S<"EntitlementActionRequest">, signal?: AbortSignal): Promise<Result<S<"Entitlement">>> {
+    return this.#send<S<"Entitlement">>("POST", `/v1/entitlements/${encodeURIComponent(entitlementId)}/actions`, body, signal);
+  }
+
+  /** Plan revisions, the plan in force and the meter definitions. `GET /v1/subscriptions`. */
+  listSubscriptionPlans(signal?: AbortSignal): Promise<Result<S<"SubscriptionPlanList">>> {
+    return this.#send<S<"SubscriptionPlanList">>("GET", `/v1/subscriptions`, undefined, signal);
+  }
+
+  /** Propose a plan revision. `POST /v1/subscriptions`. */
+  proposeSubscriptionPlan(idempotencyKey: string, body: S<"SubscriptionPlanRequest">, signal?: AbortSignal): Promise<Result<S<"SubscriptionPlan">>> {
+    return this.#send<S<"SubscriptionPlan">>("POST", `/v1/subscriptions`, body, signal, { "Idempotency-Key": idempotencyKey });
+  }
+
+  /** One plan revision. `GET /v1/subscriptions/{planId}`. */
+  getSubscriptionPlan(planId: string, signal?: AbortSignal): Promise<Result<S<"SubscriptionPlan">>> {
+    return this.#send<S<"SubscriptionPlan">>("GET", `/v1/subscriptions/${encodeURIComponent(planId)}`, undefined, signal);
+  }
+
+  /** Approve, reject or withdraw a proposed plan revision. `POST /v1/subscriptions/{planId}/actions`. */
+  actOnSubscriptionPlan(planId: string, body: S<"SubscriptionPlanActionRequest">, signal?: AbortSignal): Promise<Result<S<"SubscriptionPlan">>> {
+    return this.#send<S<"SubscriptionPlan">>("POST", `/v1/subscriptions/${encodeURIComponent(planId)}/actions`, body, signal);
+  }
+
+  /** A month's metered usage against the plan in force. `GET /v1/usage`. */
+  getUsage(params: { period?: string } = {}, signal?: AbortSignal): Promise<Result<S<"UsageReport">>> {
+    return this.#send<S<"UsageReport">>("GET", `/v1/usage${query(params)}`, undefined, signal);
+  }
+
+  /** The rows one meter counted in a month. `GET /v1/usage/basis`. */
+  getUsageBasis(params: { meter: string; period?: string; limit?: number }, signal?: AbortSignal): Promise<Result<S<"UsageBasis">>> {
+    return this.#send<S<"UsageBasis">>("GET", `/v1/usage/basis${query(params)}`, undefined, signal);
   }
 
   // --- support ---------------------------------------------------------------

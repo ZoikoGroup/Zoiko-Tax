@@ -4476,6 +4476,1309 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/content/crosswalks": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * The vendor crosswalk library
+         * @description `OPERATOR`, `ANALYST`, `AUDITOR` or `ADMIN`.
+         *
+         *     The tenant's vendor crosswalks, most recently created first, each with
+         *     every version. A crosswalk maps one vendor code namespace at one vendor
+         *     release onto Zoiko canonical service codes (Doc 02 WF-06). It is a
+         *     translation aid: `advisoryOnly` is always `true`, and no crosswalk is
+         *     ever fiscal authority — the determination engine never reads one.
+         */
+        get: operations["listCrosswalks"];
+        put?: never;
+        /**
+         * Write a vendor crosswalk and its first version
+         * @description `OPERATOR` or `ANALYST`, signed in as themselves.
+         *
+         *     Writes a crosswalk for one vendor code namespace at one vendor release,
+         *     with version 1: its mappings, the grant the vendor's code data is held
+         *     under (`VENDOR_LICENCE`, `CUSTOMER_SUPPLIED` or `PUBLIC_DOCUMENTATION`,
+         *     with its reference and end date), and its effective window. The version
+         *     is a `DRAFT`, or `IN_REVIEW` with `submit: true` — never `APPROVED`.
+         *
+         *     Each entry maps an external code exactly as the vendor emits it, with
+         *     the vendor's own meaning and a match quality: `EXACT`, `PARTIAL` (with
+         *     the predicate under which it holds) or `NO_EQUIVALENT` (no target). A
+         *     code mapped twice without a discriminating predicate, or a `PARTIAL`
+         *     entry without one, is `400 CROSSWALK_UNRESOLVED_AMBIGUITY` (WF-07). A
+         *     `levyHint` is a hint for a content researcher, never a levy.
+         *
+         *     A crosswalk for the same vendor, namespace and release already written
+         *     is `409 ALREADY_EXISTS`: a change is its next version.
+         *
+         *     **Idempotent on the `Idempotency-Key`**: the same key and request return
+         *     the crosswalk already written with `200`; the same key with a different
+         *     request is `409 IDEMPOTENCY_KEY_REUSE`.
+         */
+        post: operations["createCrosswalk"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/content/crosswalks/{crosswalkId}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * One vendor crosswalk with every version
+         * @description `OPERATOR`, `ANALYST`, `AUDITOR` or `ADMIN`.
+         *
+         *     The crosswalk with every version, oldest first: entries, grant, window,
+         *     content digest and history. A superseded version stays readable so a
+         *     historical translation can be reproduced.
+         */
+        get: operations["getCrosswalk"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/content/crosswalks/{crosswalkId}/versions": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Write the next version of a crosswalk
+         * @description `OPERATOR` or `ANALYST`, signed in as themselves.
+         *
+         *     A correction or extension of a crosswalk is its next version, written
+         *     whole; nothing in an earlier version changes. A crosswalk has at most
+         *     one version in `DRAFT` or `IN_REVIEW` at a time; another is
+         *     `409 STATE_TRANSITION_INVALID`.
+         *
+         *     **Idempotent on the `Idempotency-Key`**, as `createCrosswalk`.
+         */
+        post: operations["addCrosswalkVersion"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/content/crosswalks/{crosswalkId}/versions/{version}/transitions": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Submit, withdraw, approve, return, reject, suspend or reinstate a crosswalk version
+         * @description Signed in as themselves. `IN_REVIEW` and `WITHDRAWN` are `OPERATOR` or
+         *     `ANALYST`; every other move is `ANALYST`.
+         *
+         *     `IN_REVIEW` from `DRAFT`. `WITHDRAWN` from `DRAFT` or `IN_REVIEW`, by
+         *     the version's author. From `IN_REVIEW`: `APPROVED`,
+         *     `CHANGES_REQUESTED` or `REJECTED`, each by someone other than the
+         *     version's author and submitter (`403 MAKER_CHECKER`). `SUSPENDED` from
+         *     `APPROVED`; `APPROVED` from `SUSPENDED` is reinstatement. Approval and
+         *     reinstatement are refused once the grant's end date has passed
+         *     (`403 CROSSWALK_RIGHTS_LAPSED`). Every move but `IN_REVIEW` gives its
+         *     reason, and every move names the `revision` it was decided on —
+         *     anything recorded since is `409 VERSION_CONFLICT`.
+         *
+         *     Approving a version supersedes the version in use before it, in the
+         *     same transaction. Approval makes the mapping usable as a translation;
+         *     it does not make it fiscal authority.
+         */
+        post: operations["transitionCrosswalkVersion"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/content/crosswalks/{crosswalkId}/lookup": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Translate one external code, advisory only
+         * @description `OPERATOR`, `ANALYST`, `AUDITOR` or `ADMIN`.
+         *
+         *     Looks one external code up exactly — no case folding, prefix or
+         *     wildcard — in the version in use, or in the approved or superseded
+         *     version named by `atVersion`, for a transaction on `on` (default today, UTC).
+         *     `MAPPED` is one unconditional exact mapping; `REVIEW_REQUIRED` is a
+         *     conditional or multiple mapping the caller must resolve with facts;
+         *     `NO_EQUIVALENT` was reviewed and maps to nothing; `UNMAPPED` is not in
+         *     the version, with no default and no nearest match; `NOT_IN_FORCE` is
+         *     outside the window; `QUARANTINED` is a suspended version or a lapsed
+         *     grant. The answer is a canonical service code for a person to classify
+         *     with — never a tax treatment.
+         */
+        get: operations["lookupCrosswalk"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/content/rule-changes": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * The rule approval queue
+         * @description `OPERATOR`, `ANALYST`, `AUDITOR` or `ADMIN`.
+         *
+         *     Proposed rule changes, newest first, in any status. A change is
+         *     `PROPOSED`, `RECOMMENDED` by a specialist reviewer, and
+         *     `APPROVED_FOR_RELEASE` by an independent approver — eligible for a
+         *     content release, and nothing more: no pack is published from this
+         *     queue (WF-02).
+         */
+        get: operations["listRuleChanges"];
+        put?: never;
+        /**
+         * Propose a rule change for review
+         * @description `ANALYST` or `OPERATOR`, signed in as themselves.
+         *
+         *     Records a proposed change to a jurisdiction rule pack as `PROPOSED`:
+         *     the pack and the version it is against, the rule, the change type, the
+         *     proposed change, the source it rests on (registered source, exact
+         *     passage, edition read, authority class) and its three clocks — when the
+         *     authority published, when it takes legal effect, and (the record's
+         *     `createdAt`) when Zoiko learned of it. Test evidence may be attached now
+         *     or later. `originRef` is an opaque reference to what prompted it — a
+         *     change-feed item or a review recommendation; it is provenance only and
+         *     approves nothing.
+         *
+         *     A revision of a change sent back with `CHANGES_REQUESTED` names it in
+         *     `supersedes`, and the old one becomes `SUPERSEDED`.
+         *
+         *     **Idempotent on the `Idempotency-Key`**: the same key and request return
+         *     the proposal already recorded with `200`; the same key with a different
+         *     request is `409 IDEMPOTENCY_KEY_REUSE`.
+         */
+        post: operations["proposeRuleChange"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/content/rule-changes/{changeId}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * One proposed rule change with its review history
+         * @description `OPERATOR`, `ANALYST`, `AUDITOR` or `ADMIN`.
+         */
+        get: operations["getRuleChange"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/content/rule-changes/{changeId}/test-evidence": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Attach test evidence to a proposed rule change
+         * @description `ANALYST` or `OPERATOR`, signed in as themselves.
+         *
+         *     Attaches the reference to the golden-suite run or regression diff the
+         *     change was verified by, with the optional SHA-256 of its report (hashed
+         *     in the browser, not uploaded). Only while `PROPOSED`: what a reviewer
+         *     recommends is the change with that evidence. A change is recommended and
+         *     approved only with test evidence (`403 RULE_CHANGE_TEST_EVIDENCE_REQUIRED`).
+         */
+        post: operations["recordRuleChangeTestEvidence"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/content/rule-changes/{changeId}/transitions": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Recommend, approve for release, request changes, reject or withdraw a rule change
+         * @description Signed in as themselves. `WITHDRAWN` is the proposer's (`ANALYST` or
+         *     `OPERATOR`); every other move is `ANALYST`.
+         *
+         *     `RECOMMENDED` from `PROPOSED`: the specialist review, by someone other
+         *     than the proposer, with test evidence attached.
+         *     `APPROVED_FOR_RELEASE` from `RECOMMENDED`: the independent approval, by
+         *     someone who is neither the proposer nor the recommender, of a change
+         *     citing A0 or A1 authority (`403 SOURCE_AUTHORITY_INSUFFICIENT`
+         *     otherwise). `CHANGES_REQUESTED` and `REJECTED` from `PROPOSED` or
+         *     `RECOMMENDED`, by someone other than the proposer. Conflicts of interest
+         *     are `403 MAKER_CHECKER`. Every move gives its rationale and names the
+         *     `revision` it was decided on (`409 VERSION_CONFLICT`).
+         *
+         *     `APPROVED_FOR_RELEASE` makes the change eligible for a content release.
+         *     It does not compile, sign, publish or activate a rule pack, and changes
+         *     no tax result.
+         */
+        post: operations["transitionRuleChange"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/entitlements": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * The entitlement register, each grant beside the coverage the cell proves
+         * @description `ADMIN`, `OPERATOR`, `ANALYST` or `AUDITOR`.
+         *
+         *     Every grant, newest first, read now: its stored `lifecycle`, its
+         *     dated `status`, and its `effective` state — `ACTIVE` only when the
+         *     grant is active and the cell's verified coverage proves the operation
+         *     (Doc 18 §02 ALLOW). An active grant the coverage does not prove is
+         *     `RESTRICTED`, never live, and `mismatch` flags it; every reason a grant
+         *     is pending or blocked is listed with a stable code (Doc 18 §06).
+         *
+         *     `markets` is the verified market coverage the grants were read
+         *     against — the same assessment the coverage screens show. A research
+         *     profile is never a live market, and no grant makes it one (T18-02).
+         */
+        get: operations["listEntitlements"];
+        put?: never;
+        /**
+         * Record an entitlement grant
+         * @description `ADMIN`, signed in as themselves.
+         *
+         *     Records a contract right for one of the tenant's legal entities — one
+         *     jurisdiction, service family, mode and operation, between two dates,
+         *     from a named contract — as a `DRAFT`, or `IN_REVIEW` with `submit`. It
+         *     is never recorded approved: a second administrator approves it. Each
+         *     mode is a separate right and carries only its own operations (a
+         *     `SHADOW_ASSURANCE` grant is `SHADOW_COMPARE` only; a `NATIVE` quote
+         *     right is not a commit right). A grant is never backdated: it starts
+         *     today or later.
+         *
+         *     Idempotent on the `Idempotency-Key`: the same key and request returns
+         *     the grant already recorded with `200`; the same key with a different
+         *     request is `409 IDEMPOTENCY_KEY_REUSE`.
+         */
+        post: operations["createEntitlement"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/entitlements/{entitlementId}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * One entitlement grant, its coverage and its history
+         * @description `ADMIN`, `OPERATOR`, `ANALYST` or `AUDITOR`.
+         *
+         *     The grant read now against the cell's verified coverage. A grant of
+         *     another tenant is `404`, whether or not its identifier is known
+         *     (COV-12).
+         */
+        get: operations["getEntitlement"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/entitlements/{entitlementId}/actions": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Submit, approve, reject, withdraw, suspend, resume or revoke a grant
+         * @description `ADMIN`, signed in as themselves. Every action appends one event;
+         *     nothing is edited.
+         *
+         *     `SUBMIT` moves `DRAFT` to `IN_REVIEW`; `WITHDRAW` ends a `DRAFT` or
+         *     `IN_REVIEW` grant. `APPROVE` moves `IN_REVIEW` to `APPROVED`: by an
+         *     administrator other than the one who recorded or submitted it (`403
+         *     MAKER_CHECKER`), on the version read (`409 VERSION_CONFLICT`), not past
+         *     its end date, and not overlapping another approved grant of the same
+         *     legal entity, jurisdiction, service, mode and operation (`409
+         *     ENTITLEMENT_OVERLAP`). An approval never reaches back: the right runs
+         *     from the later of its effective date and the approval day. `REJECT`
+         *     ends an `IN_REVIEW` grant.
+         *
+         *     `SUSPEND` stops an approved grant at once. Suspension trumps approval:
+         *     `REQUEST_RESUME` records a request, and `RESUME` lifts it only on that
+         *     request, by an administrator other than the requester and the
+         *     suspender. `REVOKE` ends an approved or suspended grant for good.
+         *     Every action but `SUBMIT` gives its reason.
+         *
+         *     Approval is a contract right, not coverage: an approved grant over
+         *     coverage the cell does not prove reads `RESTRICTED`.
+         */
+        post: operations["actOnEntitlement"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/subscriptions": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * The tenant's subscription plan revisions and the plan in force
+         * @description `ADMIN`, `OPERATOR`, `ANALYST` or `AUDITOR`.
+         *
+         *     Every plan revision, newest first, with the one in force today — of
+         *     the approved revisions whose term includes today, the one approved
+         *     last — and the meter definitions usage is counted by. A plan records
+         *     included quantities per meter and no price; it grants no entitlement.
+         */
+        get: operations["listSubscriptionPlans"];
+        put?: never;
+        /**
+         * Propose a subscription plan revision
+         * @description `ADMIN`, signed in as themselves.
+         *
+         *     Records a plan revision as `PROPOSED`: a plan code and name, the
+         *     contract it comes from, its term, and an included monthly quantity and
+         *     overage policy for each metered capability it contracts. A meter it
+         *     does not name is `NOT_CONTRACTED`. The term starts today or later, so a
+         *     new plan never re-reads usage already metered against another. It is in
+         *     force only once a second administrator approves it.
+         *
+         *     Idempotent on the `Idempotency-Key`, as `POST /v1/entitlements` is.
+         */
+        post: operations["proposeSubscriptionPlan"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/subscriptions/{planId}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * One subscription plan revision
+         * @description `ADMIN`, `OPERATOR`, `ANALYST` or `AUDITOR`.
+         */
+        get: operations["getSubscriptionPlan"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/subscriptions/{planId}/actions": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Approve, reject or withdraw a proposed plan revision
+         * @description `ADMIN`, signed in as themselves.
+         *
+         *     Only a `PROPOSED` revision moves, once. `APPROVE` is by an
+         *     administrator other than the proposer (`403 MAKER_CHECKER`), on the
+         *     version read (`409 VERSION_CONFLICT`). `REJECT` and `WITHDRAW` give
+         *     their reason. A change to an approved plan is a new revision.
+         */
+        post: operations["actOnSubscriptionPlan"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/usage": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * A month's metered usage against the plan in force
+         * @description `ADMIN`, `OPERATOR`, `ANALYST` or `AUDITOR`.
+         *
+         *     Counts the period's usage from the cell's own records, as exact
+         *     integers: recorded tax decisions, fiscal documents, filing submission
+         *     attempts and shadow runs whose instant falls in the UTC month. Each
+         *     line carries the rule it was counted by and `basisDigest`, a SHA-256
+         *     over the sorted identifiers of the rows counted — `GET
+         *     /v1/usage/basis` lists them — so the number is reproducible from the
+         *     records. Nothing is stored or estimated; a retried commit that returned
+         *     its original decision is counted once.
+         *
+         *     Each meter is set against the plan in force on the period's last day
+         *     (today, for the open period): `WITHIN_QUOTA`, `AT_QUOTA` or
+         *     `OVER_QUOTA` with the exact remainder or overage, `NOT_CONTRACTED`
+         *     when the plan does not name it, `NO_PLAN` without one. A `HARD_LIMIT`
+         *     is reported, not enforced, by this cell.
+         */
+        get: operations["getUsage"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/usage/basis": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * The rows one meter counted in a month
+         * @description `ADMIN`, `OPERATOR`, `ANALYST` or `AUDITOR`.
+         *
+         *     One meter's count and `basisDigest` for the period, and the first
+         *     rows it counted in the digest's order — identifiers ascending, compared
+         *     bytewise — each with the instant that placed it in the period. The count,
+         *     the digest and the rows are read in one statement. Joining every row's
+         *     `id` with a newline and hashing with SHA-256 gives `basisDigest`; when
+         *     `truncated` is true, list the rest from the source table by the
+         *     meter's rule.
+         */
+        get: operations["getUsageBasis"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/ctc/applicability": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Country applicability records
+         * @description `OPERATOR`, `ANALYST` or `AUDITOR`.
+         *
+         *     The tenant's country applicability records (Doc 21 W01), oldest first, in any
+         *     status, each with its terms versions, G0–G4 sign-offs, evidence and history.
+         *     A record decides a duty only while it is `ACTIVE`.
+         */
+        get: operations["listCTCApplicability"];
+        put?: never;
+        /**
+         * Record a country applicability record
+         * @description `OPERATOR` or `ANALYST`, signed in as themselves.
+         *
+         *     Records one cell — legal entity, country, document type, buyer kind — and
+         *     the first version of its terms, in `DRAFT`. It decides nothing until it is
+         *     submitted, every G0–G4 gate its duty needs is signed on its current version
+         *     by someone other than its authors, evidence is attached and another person
+         *     activates it. A national format profile is only used in its own country
+         *     (`400 CTC_PROFILE_COUNTRY_MISMATCH`). An absent `legalEntityId` is the
+         *     tenant's default entity.
+         */
+        post: operations["createCTCApplicability"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/ctc/applicability/{applicabilityId}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * One country applicability record
+         * @description `OPERATOR`, `ANALYST` or `AUDITOR`.
+         */
+        get: operations["getCTCApplicability"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/ctc/applicability/{applicabilityId}/versions": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Record the next version of a record's terms
+         * @description `OPERATOR` or `ANALYST`, signed in as themselves.
+         *
+         *     Terms are never edited: a change is the next version, and a record in review
+         *     returns to `DRAFT` — sign-offs given on an earlier version do not carry over.
+         *     Only a `DRAFT` or `IN_REVIEW` record is revised; an active one is retired and
+         *     replaced. Terms identical to the current version record nothing and answer
+         *     `200`.
+         */
+        post: operations["reviseCTCApplicability"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/ctc/applicability/{applicabilityId}/evidence": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Attach an evidence document to a record
+         * @description `OPERATOR` or `ANALYST`, signed in as themselves.
+         *
+         *     The legal source evidence, recorded by the SHA-256 the browser computed. The
+         *     file itself is not uploaded. A record is activated only with evidence
+         *     attached. The same document again records nothing and answers `200`.
+         */
+        post: operations["addCTCApplicabilityEvidence"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/ctc/applicability/{applicabilityId}/gates": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Sign a G0–G4 release gate on a record's version
+         * @description `ANALYST`, signed in as themselves, who is neither the record's creator nor
+         *     the author of its current version (`403 MAKER_CHECKER`).
+         *
+         *     Doc 21 §11's release gates. Every record needs `G0_SCOPE_AUTHORITY` and
+         *     `G1_LEGAL_CONTENT_RIGHTS`; a record that dispatches documents also needs
+         *     `G2_TECHNICAL_QA`, `G3_SECURITY_OPERATIONS` and `G4_CONTROLLED_PRODUCTION`.
+         *     A sign-off names the version reviewed (`409 VERSION_CONFLICT` otherwise) and
+         *     its own reference. A gate already signed on the version answers `200`.
+         */
+        post: operations["signCTCApplicabilityGate"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/ctc/applicability/{applicabilityId}/transitions": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Submit, return, activate, suspend, resume or retire a record
+         * @description `SUBMIT` and `SUSPEND`: `OPERATOR` or `ANALYST`. `RETURN`, `ACTIVATE`,
+         *     `RESUME` and `RETIRE`: `ANALYST`. Signed in as themselves.
+         *
+         *     `ACTIVATE` names the version reviewed and needs every required gate signed
+         *     on it (`409 CTC_GATE_SIGNOFF_MISSING`, naming the gates), evidence attached
+         *     (`409 CTC_EVIDENCE_MISSING`), an activator who is neither the creator nor the
+         *     current version's author (`403 MAKER_CHECKER`), and no other active or
+         *     suspended record for an overlapping part of the same cell
+         *     (`409 CTC_APPLICABILITY_CONFLICT`). `SUSPEND` stops new validation and
+         *     dispatch at once and keeps what was submitted; the suspender does not also
+         *     `RESUME`. Return, suspension, resumption and retirement give a reason.
+         */
+        post: operations["transitionCTCApplicability"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/ctc/resolution": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * What a cell owes on a date
+         * @description `OPERATOR`, `ANALYST` or `AUDITOR`.
+         *
+         *     `REQUIRED`, `OPTIONAL` or `PROHIBITED` from the one `ACTIVE` record of the
+         *     cell in effect on the date, with its source; otherwise `REVIEW_BLOCKED` with
+         *     the reason: `CTC_NO_APPLICABILITY` when nothing covers the cell,
+         *     `CTC_APPLICABILITY_NOT_ACTIVE` when the record covering it is in draft, in
+         *     review or suspended, `CTC_APPLICABILITY_CONFLICT` when two claim it. Nothing
+         *     is assumed and nothing is recorded (Doc 21 W01). An absent `legalEntityId` is
+         *     the tenant's default entity.
+         */
+        get: operations["resolveCTCApplicability"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/ctc/validations": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Format validation reports
+         * @description `OPERATOR`, `ANALYST` or `AUDITOR`.
+         *
+         *     Immutable validation reports, newest first, with every rule's result.
+         */
+        get: operations["listCTCValidations"];
+        put?: never;
+        /**
+         * Validate a fiscal document against a record's format profile
+         * @description `OPERATOR` or `ANALYST`, signed in as themselves.
+         *
+         *     Runs the current ruleset over a committed fiscal document under an `ACTIVE`
+         *     record's current terms (Doc 21 W06): the record's cell, canonical invoice
+         *     semantics (number, lines, tax pinned to decisions, exact totals, the
+         *     preceding-document reference of a correction) and the profile's structural
+         *     constraints. Every rule's result is stored with the ruleset version. The
+         *     official schema and Schematron stage is reported `NOT_EVALUATED`: no licensed
+         *     bundle is installed, so `PASSED` is a pre-dispatch structural check, never
+         *     certification. Validating again with the same document state, record version
+         *     and ruleset returns the same report with `200`. A `PROHIBITED` record has no
+         *     profile (`409 CTC_SUBMISSION_PROHIBITED`).
+         */
+        post: operations["validateCTCDocument"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/ctc/validations/{validationId}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * One format validation report
+         * @description `OPERATOR`, `ANALYST` or `AUDITOR`.
+         */
+        get: operations["getCTCValidation"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/ctc/submissions": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Authority submissions
+         * @description `OPERATOR`, `ANALYST` or `AUDITOR`.
+         *
+         *     Submissions, newest first, each with its events. A rejected submission
+         *     carries its correction task, open until a committed fiscal document names the
+         *     rejected one as its predecessor.
+         */
+        get: operations["listCTCSubmissions"];
+        put?: never;
+        /**
+         * Prepare and seal a submission
+         * @description `OPERATOR`, signed in as themselves.
+         *
+         *     Seals a committed fiscal document under an `ACTIVE` record whose duty is
+         *     `REQUIRED` or `OPTIONAL`, covering the document's legal entity, type and
+         *     issue date (`409 CTC_DOCUMENT_MISMATCH`, `409 CTC_RULE_OUT_OF_EFFECT`). The
+         *     newest validation of the document under the record must have `PASSED` and
+         *     still speak for the document, the record's current version and the current
+         *     ruleset (`409 CTC_VALIDATION_REQUIRED`, `409 CTC_VALIDATION_STALE`). The
+         *     document projection, record version and report are sealed under one payload
+         *     digest. **Idempotent per document and record**: while a submission of the
+         *     document under the record is live — anything but `WITHDRAWN` — preparing
+         *     again returns it with `200`. Nothing is sent here.
+         */
+        post: operations["prepareCTCSubmission"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/ctc/submissions/{submissionId}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * One submission with its events
+         * @description `OPERATOR`, `ANALYST` or `AUDITOR`.
+         */
+        get: operations["getCTCSubmission"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/ctc/submissions/{submissionId}/dispatch": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Authorise one dispatch attempt
+         * @description `OPERATOR` or `ANALYST`, signed in as themselves, who did not prepare the
+         *     submission (`403 MAKER_CHECKER`).
+         *
+         *     Records one attempt under the submission's fixed `externalRef`. The checker
+         *     names the payload digest reviewed (`409 CTC_PAYLOAD_DIGEST_MISMATCH`); the
+         *     payload is recomputed from the document, record and report as they stand and
+         *     must still match the seal, under a record still `ACTIVE` on the sealed
+         *     version (`409 CTC_VALIDATION_STALE`, `409 CTC_APPLICABILITY_NOT_ACTIVE`). A
+         *     submission whose outcome is unknown is sent again only after a status enquiry
+         *     found nothing (`409 CTC_OUTCOME_UNCERTAIN`). A submission already sent or
+         *     answered is returned as it is with `200` — never a second fiscal document. No
+         *     authority or partner connector is wired here: the transmission itself happens
+         *     through the approved channel and its answers are recorded.
+         */
+        post: operations["dispatchCTCSubmission"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/ctc/submissions/{submissionId}/responses": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Record what the rail or the authority answered
+         * @description `OPERATOR` or `ANALYST`, signed in as themselves.
+         *
+         *     ZoikoTax does not invent the authority's answer. `TRANSPORT_RECEIVED` is a
+         *     rail or partner receipt and names its `transportRef`; it leaves the
+         *     authority outcome pending. `AUTHORITY_ACCEPTED` names the authority's own
+         *     reference; `AUTHORITY_REJECTED` keeps the authority's raw code and says why,
+         *     and opens a correction task that a new fiscal document naming the rejected
+         *     one closes. Both carry the SHA-256 of the raw receipt. `OUTCOME_UNKNOWN` says
+         *     why nobody knows; `STATUS_NOT_FOUND` records a status enquiry, by
+         *     `transportRef`, that found nothing — the only thing that lets a submission of
+         *     unknown outcome be sent again. Once accepted or rejected, a later answer is
+         *     `409 CTC_FINAL_OUTCOME_RECORDED`. **Idempotent on the answer**: the same
+         *     answer again records nothing and answers `200`.
+         */
+        post: operations["recordCTCResponse"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/ctc/submissions/{submissionId}/withdrawal": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Withdraw a prepared submission never dispatched
+         * @description `OPERATOR`, signed in as themselves.
+         *
+         *     Releases a `PREPARED` submission with the reason, so the document can be
+         *     validated and prepared again. A submission once dispatched is never
+         *     withdrawn.
+         */
+        post: operations["withdrawCTCSubmission"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/regulatory-changes": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * The regulatory change feed
+         * @description `OPERATOR`, `ANALYST` or `AUDITOR`.
+         *
+         *     Recorded regulatory changes, newest first, in any status: a change that
+         *     was closed or found not to apply stays listed with its disposition and
+         *     rationale (Doc 03 Z03-AT-09). A listing carries no related changes or
+         *     assessment summary; the detail read does.
+         */
+        get: operations["listRegulatoryChanges"];
+        put?: never;
+        /**
+         * Record a regulatory change from a source edition
+         * @description `OPERATOR` or `ANALYST`, signed in as themselves.
+         *
+         *     Records a reported change as `NEW`: the authority, jurisdiction,
+         *     citation, edition and the SHA-256 of the captured source document
+         *     (hashed in the browser; nothing is uploaded), its kind (Doc 03 §06), and
+         *     three separate clocks — published, effective and discovered — never
+         *     assumed equal (Z03-AT-10). A `MONITOR` change names the watcher alert it
+         *     was recorded from; no watcher is connected to this cell, so a person
+         *     records it. A `BACKDATED_RULE` takes effect before it was published. A
+         *     missing source digest or effective date is `400` before anything is
+         *     recorded.
+         *
+         *     A change is one legal effect of one source edition. A source with two
+         *     effects is recorded as two changes of different kinds, linked by
+         *     `sourceKey`. The same source edition's change of the same kind reported
+         *     again returns the change already recorded with `200`; with different
+         *     particulars it is `409 CHANGE_DEDUPE_CONFLICT`.
+         *
+         *     **Idempotent on the `Idempotency-Key`**: the same key and request return
+         *     the change with `200`; the same key with a different request is
+         *     `409 IDEMPOTENCY_KEY_REUSE`.
+         */
+        post: operations["recordRegulatoryChange"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/regulatory-changes/{changeId}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * One regulatory change with its history
+         * @description `OPERATOR`, `ANALYST` or `AUDITOR`.
+         *
+         *     The change with every triage, hold and disposition, the other changes
+         *     recorded from the same source edition, its current assessment's
+         *     severity and how many recommendations on that assessment were
+         *     accepted.
+         */
+        get: operations["getRegulatoryChange"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/regulatory-changes/{changeId}/transitions": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Triage, hold, resume or decide a regulatory change
+         * @description `ANALYST`, signed in as themselves. Every act gives its rationale and
+         *     names the `version` read; anything recorded since is
+         *     `409 VERSION_CONFLICT`.
+         *
+         *     `TRIAGED` from `NEW`, with a `priority`. `ON_HOLD` from any open status,
+         *     with a `holdReason`; a held change resumes to the status it was held
+         *     from before anything else is decided. `NO_IMPACT` (disposition
+         *     `NOT_APPLICABLE`) from `NEW`, `TRIAGED` or `IN_IMPACT_ASSESSMENT`.
+         *     `CLOSED` from `IN_IMPACT_ASSESSMENT` with disposition `MONITOR`, or
+         *     `CHANGE_NEEDED` once a recommendation on the current assessment has been
+         *     independently accepted. `IN_IMPACT_ASSESSMENT` is never named: running
+         *     an assessment makes it.
+         *
+         *     Closing a change publishes, approves and changes nothing: a change that
+         *     needs a rule change is handed off by its accepted recommendation.
+         */
+        post: operations["transitionRegulatoryChange"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/regulatory-changes/{changeId}/assessments": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Run the deterministic impact assessment of a triaged change
+         * @description `ANALYST`, signed in as themselves.
+         *
+         *     Assesses the change against the active content bundle's coverage at the
+         *     change's effective date and the tenant's own registrations and
+         *     obligations: every content component in scope, or the coverage gap when
+         *     none is; every open registration in the jurisdiction; every open
+         *     obligation whose period ends on or after the effective date, marked
+         *     retrospective where a backdated change reaches into it. Each item has a
+         *     severity and its exact basis. The `inputsDigest` covers everything read
+         *     and the `assessmentDigest` what was found, so the same inputs give the
+         *     same assessment: assessing again on unchanged inputs records nothing and
+         *     returns the current assessment with `200`. On changed inputs a new
+         *     current assessment is recorded with `201`, and recommendations on the
+         *     old one can no longer be recommended or reviewed.
+         *
+         *     The first assessment moves a `TRIAGED` change to `IN_IMPACT_ASSESSMENT`.
+         *     An assessment is a read: it writes no tax decision, ledger posting or
+         *     filing (Z03-AT-17). A cell with no active content is
+         *     `503 NO_CONTENT_BUNDLE`.
+         */
+        post: operations["assessRegulatoryChange"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/impact-assessments": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Tax impact assessments
+         * @description `OPERATOR`, `ANALYST` or `AUDITOR`.
+         *
+         *     Assessments newest first — of one change, or the tenant's — each saying
+         *     whether it is its change's current assessment.
+         */
+        get: operations["listImpactAssessments"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/impact-assessments/{assessmentId}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * One impact assessment with its items and basis
+         * @description `OPERATOR`, `ANALYST` or `AUDITOR`.
+         *
+         *     The assessment, verified against its digest before it is returned: a
+         *     stored assessment whose items no longer match its digest is
+         *     `500 EVIDENCE_INTEGRITY` and is not shown.
+         */
+        get: operations["getImpactAssessment"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/review-recommendations": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Review recommendations
+         * @description `OPERATOR`, `ANALYST` or `AUDITOR`.
+         *
+         *     Recommendations newest first, each with its change's current assessment
+         *     so a recommendation overtaken by a reassessment shows `stale`.
+         */
+        get: operations["listReviewRecommendations"];
+        put?: never;
+        /**
+         * Draft a review recommendation on a change's current assessment
+         * @description `ANALYST`, signed in as themselves.
+         *
+         *     Drafts a recommendation — `UPDATE_RULE`, `ADD_RULE`, `RETIRE_RULE`,
+         *     `NOTIFY_CUSTOMERS`, `RETROSPECTIVE_REASSESSMENT`, `MONITOR` or
+         *     `NO_ACTION` — with its rationale and the assessed items it is about,
+         *     bound to the assessment's digest. The change is `IN_IMPACT_ASSESSMENT`
+         *     and the assessment is its current one, else
+         *     `409 ASSESSMENT_SUPERSEDED`. Targets are items the assessment found, of
+         *     the kind the action needs.
+         *
+         *     `AI_ASSISTED` records the model's provenance — use case, model, provider
+         *     and prompt profiles, AI release train, the invocation and the model's
+         *     original text, kept unchanged as evidence — at authority `A1` (propose)
+         *     only (ZTAX-AIGOV-001 §4, §14). The rationale is the person's own. AI
+         *     never counts as the recommender or the reviewer.
+         *
+         *     **Idempotent on the `Idempotency-Key`**.
+         */
+        post: operations["draftReviewRecommendation"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/review-recommendations/{recommendationId}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * One review recommendation with its history
+         * @description `OPERATOR`, `ANALYST` or `AUDITOR`.
+         *
+         *     The recommendation with every version of its text, its recommendation,
+         *     its independent review and, once accepted, its `handoffRef`.
+         */
+        get: operations["getReviewRecommendation"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/review-recommendations/{recommendationId}/revisions": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Revise a draft or a recommendation returned for changes
+         * @description `ANALYST`, signed in as themselves.
+         *
+         *     Replaces what a `DRAFT` or `CHANGES_REQUESTED` recommendation says. The
+         *     earlier text stays in the history, and the reviser may not review it.
+         */
+        post: operations["reviseReviewRecommendation"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/review-recommendations/{recommendationId}/recommend": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Recommend a draft for independent review
+         * @description `ANALYST`, signed in as themselves.
+         *
+         *     A specialist's recommendation of a `DRAFT`, with the reason, on the
+         *     change's current assessment (`409 ASSESSMENT_SUPERSEDED` otherwise). It
+         *     then awaits an independent review.
+         */
+        post: operations["recommendReviewRecommendation"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/review-recommendations/{recommendationId}/review": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Independently review a recommended recommendation
+         * @description `ANALYST`, signed in as themselves, and neither the recommender nor
+         *     anyone who wrote a version of it (`403 MAKER_CHECKER`).
+         *
+         *     `ACCEPT`, `REJECT` or `REQUEST_CHANGES` a `RECOMMENDED` recommendation,
+         *     with the reason, on its exact version and the change's current
+         *     assessment. `ACCEPT` records an opaque `handoffRef` a later rule-approval
+         *     workflow can name. Acceptance publishes no release pack and changes no
+         *     rule, content or tax result (Sidebar WF-02).
+         */
+        post: operations["reviewReviewRecommendation"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/review-recommendations/{recommendationId}/withdrawal": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Withdraw an open recommendation
+         * @description `ANALYST`, signed in as themselves. Withdraws a recommendation that is
+         *     not accepted, rejected or already withdrawn, with the reason — for
+         *     example one overtaken by a reassessment.
+         */
+        post: operations["withdrawReviewRecommendation"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
 }
 export type webhooks = Record<string, never>;
 export interface components {
@@ -10405,8 +11708,1689 @@ export interface components {
             to: components["schemas"]["ExemptionEvidenceStatus"];
             reason?: components["schemas"]["EvidenceText"];
         };
+        /**
+         * CrosswalkId
+         * Format: uuid
+         * @example 01920e10-0000-7000-8000-00000000c001
+         */
+        CrosswalkId: string;
+        /**
+         * RuleChangeId
+         * Format: uuid
+         * @example 01920e20-0000-7000-8000-00000000d001
+         */
+        RuleChangeId: string;
+        /**
+         * CrosswalkVendor
+         * @description The vendor or source system, upper case.
+         * @example SURETAX
+         */
+        CrosswalkVendor: string;
+        /**
+         * CrosswalkNamespace
+         * @description The vendor's code namespace, upper case.
+         * @example TRANS_TYPE
+         */
+        CrosswalkNamespace: string;
+        /**
+         * CrosswalkLabel
+         * @description A short label — a title, a vendor release, a grant reference.
+         */
+        CrosswalkLabel: string;
+        /**
+         * CrosswalkText
+         * @description The vendor's meaning of a code, a predicate or a note. Vendor configuration, not personal data.
+         */
+        CrosswalkText: string;
+        /**
+         * CrosswalkExternalCode
+         * @description An external code exactly as the vendor emits it.
+         * @example 010101
+         */
+        CrosswalkExternalCode: string;
+        /**
+         * CanonicalServiceCode
+         * @description A Zoiko canonical service code in the tax ontology.
+         * @example ontology:telecom/voice/fixed/local
+         */
+        CanonicalServiceCode: string;
+        /**
+         * CrosswalkLevyHint
+         * @description A candidate levy component code for a content researcher. Never creates a levy.
+         * @example US-FUSF
+         */
+        CrosswalkLevyHint: string;
+        /**
+         * CrosswalkMatch
+         * @description How well the external code corresponds to the target.
+         * @enum {string}
+         */
+        CrosswalkMatch: "EXACT" | "PARTIAL" | "NO_EQUIVALENT";
+        /**
+         * CrosswalkRightsBasis
+         * @description On what footing the vendor's code data is held.
+         * @enum {string}
+         */
+        CrosswalkRightsBasis: "VENDOR_LICENCE" | "CUSTOMER_SUPPLIED" | "PUBLIC_DOCUMENTATION";
+        /**
+         * CrosswalkStatus
+         * @enum {string}
+         */
+        CrosswalkStatus: "DRAFT" | "IN_REVIEW" | "APPROVED" | "CHANGES_REQUESTED" | "REJECTED" | "WITHDRAWN" | "SUSPENDED" | "SUPERSEDED";
+        /**
+         * CrosswalkEventKind
+         * @enum {string}
+         */
+        CrosswalkEventKind: "CREATED" | "SUBMITTED" | "APPROVED" | "CHANGES_REQUESTED" | "REJECTED" | "WITHDRAWN" | "SUSPENDED" | "REINSTATED" | "SUPERSEDED";
+        /**
+         * CrosswalkResolution
+         * @enum {string}
+         */
+        CrosswalkResolution: "MAPPED" | "REVIEW_REQUIRED" | "NO_EQUIVALENT" | "UNMAPPED" | "NOT_IN_FORCE" | "QUARANTINED";
+        /**
+         * CrosswalkRights
+         * @description The grant a version's vendor data is held under.
+         */
+        CrosswalkRights: {
+            basis: components["schemas"]["CrosswalkRightsBasis"];
+            reference: components["schemas"]["CrosswalkLabel"];
+            expiresOn?: components["schemas"]["CivilDate"];
+            evidenceSha256?: components["schemas"]["Sha256Hex"];
+        };
+        /** CrosswalkEntry */
+        CrosswalkEntry: {
+            externalCode: components["schemas"]["CrosswalkExternalCode"];
+            description: components["schemas"]["CrosswalkText"];
+            match: components["schemas"]["CrosswalkMatch"];
+            serviceTarget?: components["schemas"]["CanonicalServiceCode"];
+            levyHint?: components["schemas"]["CrosswalkLevyHint"];
+            predicate?: components["schemas"]["CrosswalkText"];
+            note?: components["schemas"]["CrosswalkText"];
+        };
+        /** CrosswalkEvent */
+        CrosswalkEvent: {
+            /** Format: int32 */
+            seq: number;
+            kind: components["schemas"]["CrosswalkEventKind"];
+            status: components["schemas"]["CrosswalkStatus"];
+            reason?: components["schemas"]["EvidenceText"];
+            recordedAt: components["schemas"]["Timestamp"];
+            recordedBy: components["schemas"]["EvidenceActor"];
+        };
+        /**
+         * CrosswalkVersion
+         * @description One immutable crosswalk version. Its entries never change; its status is its history.
+         */
+        CrosswalkVersion: {
+            /** Format: int32 */
+            version: number;
+            status: components["schemas"]["CrosswalkStatus"];
+            /**
+             * Format: int32
+             * @description The number of events recorded. A transition names it.
+             */
+            revision: number;
+            rights: components["schemas"]["CrosswalkRights"];
+            effectiveFrom: components["schemas"]["CivilDate"];
+            effectiveTo?: components["schemas"]["CivilDate"];
+            contentDigest: components["schemas"]["Digest"];
+            entries: components["schemas"]["CrosswalkEntry"][];
+            submittedBy?: components["schemas"]["EvidenceActor"];
+            approvedBy?: components["schemas"]["EvidenceActor"];
+            approvedAt?: components["schemas"]["Timestamp"];
+            history: components["schemas"]["CrosswalkEvent"][];
+            createdAt: components["schemas"]["Timestamp"];
+            createdBy: components["schemas"]["EvidenceActor"];
+        };
+        /**
+         * Crosswalk
+         * @description One vendor code namespace at one vendor release, mapped onto Zoiko
+         *     canonical service codes, with every version. Advisory only: a
+         *     crosswalk is never fiscal authority.
+         */
+        Crosswalk: {
+            id: components["schemas"]["CrosswalkId"];
+            vendor: components["schemas"]["CrosswalkVendor"];
+            namespace: components["schemas"]["CrosswalkNamespace"];
+            vendorRelease: components["schemas"]["CrosswalkLabel"];
+            title: components["schemas"]["CrosswalkLabel"];
+            /** @description Always true. A crosswalk translates codes; it never determines tax. */
+            advisoryOnly: boolean;
+            /**
+             * Format: int32
+             * @description The version in use — the newest approved or suspended one — if any.
+             */
+            currentVersion?: number;
+            versions: components["schemas"]["CrosswalkVersion"][];
+            asOf: components["schemas"]["Timestamp"];
+            createdAt: components["schemas"]["Timestamp"];
+            createdBy: components["schemas"]["EvidenceActor"];
+        };
+        /** CrosswalkList */
+        CrosswalkList: {
+            crosswalks: components["schemas"]["Crosswalk"][];
+        };
+        /** CrosswalkVersionRequest */
+        CrosswalkVersionRequest: {
+            rights: components["schemas"]["CrosswalkRights"];
+            effectiveFrom: components["schemas"]["CivilDate"];
+            effectiveTo?: components["schemas"]["CivilDate"];
+            entries: components["schemas"]["CrosswalkEntry"][];
+            /** @description Submit for review now. Otherwise the version is kept as a DRAFT. */
+            submit?: boolean;
+        };
+        /** CrosswalkRequest */
+        CrosswalkRequest: {
+            vendor: components["schemas"]["CrosswalkVendor"];
+            namespace: components["schemas"]["CrosswalkNamespace"];
+            vendorRelease: components["schemas"]["CrosswalkLabel"];
+            title: components["schemas"]["CrosswalkLabel"];
+            version: components["schemas"]["CrosswalkVersionRequest"];
+        };
+        /**
+         * ContentTransitionRequest
+         * @description A move of a crosswalk version to the status named.
+         */
+        ContentTransitionRequest: {
+            to: components["schemas"]["CrosswalkStatus"];
+            /**
+             * Format: int32
+             * @description The `revision` that was read. Anything recorded since is `VERSION_CONFLICT`.
+             */
+            expectedRevision: number;
+            reason?: components["schemas"]["EvidenceText"];
+        };
+        /**
+         * CrosswalkLookup
+         * @description One external code translated. Advisory only — never a tax treatment.
+         */
+        CrosswalkLookup: {
+            crosswalkId: components["schemas"]["CrosswalkId"];
+            /**
+             * Format: int32
+             * @description The version resolved against; absent when none has been approved.
+             */
+            version?: number;
+            code: components["schemas"]["CrosswalkExternalCode"];
+            on: components["schemas"]["CivilDate"];
+            resolution: components["schemas"]["CrosswalkResolution"];
+            /** @description Always true. */
+            advisoryOnly: boolean;
+            candidates: components["schemas"]["CrosswalkEntry"][];
+            detail: components["schemas"]["CrosswalkText"];
+            asOf: components["schemas"]["Timestamp"];
+        };
+        /**
+         * RulePackId
+         * @description A rule pack identity (CONT-001 §11 pack_id).
+         * @example US-NY-TELECOM
+         */
+        RulePackId: string;
+        /**
+         * RulePackVersion
+         * @description A rule pack version, MAJOR.MINOR.PATCH.
+         * @example 3.2.0
+         */
+        RulePackVersion: string;
+        /**
+         * RuleSemanticId
+         * @description The stable identity of a logical rule across its versions.
+         * @example ZTAX-RULE-NY-MCTD-SURCHARGE
+         */
+        RuleSemanticId: string;
+        /**
+         * RuleChangeType
+         * @enum {string}
+         */
+        RuleChangeType: "RATE_CHANGE" | "BASE_CHANGE" | "NEW_LEVY" | "LEVY_REPEAL" | "EXEMPTION_CHANGE" | "THRESHOLD_CHANGE" | "SITUS_CHANGE" | "RESPONSIBILITY_CHANGE" | "OBLIGATION_CHANGE" | "OTHER";
+        /**
+         * RuleChangeStatus
+         * @enum {string}
+         */
+        RuleChangeStatus: "PROPOSED" | "RECOMMENDED" | "APPROVED_FOR_RELEASE" | "CHANGES_REQUESTED" | "REJECTED" | "WITHDRAWN" | "SUPERSEDED";
+        /**
+         * RuleChangeEventKind
+         * @enum {string}
+         */
+        RuleChangeEventKind: "PROPOSED" | "TEST_EVIDENCE_RECORDED" | "RECOMMENDED" | "APPROVED" | "CHANGES_REQUESTED" | "REJECTED" | "WITHDRAWN" | "SUPERSEDED";
+        /**
+         * SourceAuthorityClass
+         * @description CONT-001 §4's source authority class. Only A0 and A1 ground a production rule by themselves.
+         * @enum {string}
+         */
+        SourceAuthorityClass: "A0" | "A1" | "A2" | "B1" | "B2" | "C1" | "U";
+        /**
+         * RuleChangeText
+         * @description Legal content text — a summary, the proposed change, its impact. Not personal data.
+         */
+        RuleChangeText: string;
+        /**
+         * RuleChangeRef
+         * @description A reference — a source id, passage, edition, test run or origin.
+         */
+        RuleChangeRef: string;
+        /** RuleChangeCitation */
+        RuleChangeCitation: {
+            sourceId: components["schemas"]["RuleChangeRef"];
+            reference: components["schemas"]["RuleChangeRef"];
+            edition: components["schemas"]["RuleChangeRef"];
+            authorityClass: components["schemas"]["SourceAuthorityClass"];
+        };
+        /** RuleChangeTestEvidence */
+        RuleChangeTestEvidence: {
+            ref: components["schemas"]["RuleChangeRef"];
+            sha256?: components["schemas"]["Sha256Hex"];
+        };
+        /** RuleChangeEvent */
+        RuleChangeEvent: {
+            /** Format: int32 */
+            seq: number;
+            kind: components["schemas"]["RuleChangeEventKind"];
+            status: components["schemas"]["RuleChangeStatus"];
+            reason?: components["schemas"]["EvidenceText"];
+            testEvidence?: components["schemas"]["RuleChangeTestEvidence"];
+            recordedAt: components["schemas"]["Timestamp"];
+            recordedBy: components["schemas"]["EvidenceActor"];
+        };
+        /**
+         * RuleChange
+         * @description A proposed change to a jurisdiction rule pack and its review.
+         *     `releaseEligible` is true once approved for release; nothing is
+         *     published or activated by it.
+         */
+        RuleChange: {
+            id: components["schemas"]["RuleChangeId"];
+            packId: components["schemas"]["RulePackId"];
+            baseVersion: components["schemas"]["RulePackVersion"];
+            ruleId?: components["schemas"]["RuleSemanticId"];
+            jurisdiction: components["schemas"]["EvidenceJurisdiction"];
+            changeType: components["schemas"]["RuleChangeType"];
+            summary: components["schemas"]["RuleChangeText"];
+            detail: components["schemas"]["RuleChangeText"];
+            impact?: components["schemas"]["RuleChangeText"];
+            citation: components["schemas"]["RuleChangeCitation"];
+            publishedOn?: components["schemas"]["CivilDate"];
+            effectiveFrom: components["schemas"]["CivilDate"];
+            effectiveTo?: components["schemas"]["CivilDate"];
+            originRef?: components["schemas"]["RuleChangeRef"];
+            supersedes?: components["schemas"]["RuleChangeId"];
+            status: components["schemas"]["RuleChangeStatus"];
+            /**
+             * Format: int32
+             * @description The number of events recorded. A transition names it.
+             */
+            revision: number;
+            testEvidence?: components["schemas"]["RuleChangeTestEvidence"];
+            recommendedBy?: components["schemas"]["EvidenceActor"];
+            approvedBy?: components["schemas"]["EvidenceActor"];
+            approvedAt?: components["schemas"]["Timestamp"];
+            /** @description True once APPROVED_FOR_RELEASE — eligible for a content release, not released. */
+            releaseEligible: boolean;
+            history: components["schemas"]["RuleChangeEvent"][];
+            asOf: components["schemas"]["Timestamp"];
+            createdAt: components["schemas"]["Timestamp"];
+            createdBy: components["schemas"]["EvidenceActor"];
+        };
+        /** RuleChangeList */
+        RuleChangeList: {
+            ruleChanges: components["schemas"]["RuleChange"][];
+        };
+        /** RuleChangeRequest */
+        RuleChangeRequest: {
+            packId: components["schemas"]["RulePackId"];
+            baseVersion: components["schemas"]["RulePackVersion"];
+            ruleId?: components["schemas"]["RuleSemanticId"];
+            jurisdiction: components["schemas"]["EvidenceJurisdiction"];
+            changeType: components["schemas"]["RuleChangeType"];
+            summary: components["schemas"]["RuleChangeText"];
+            detail: components["schemas"]["RuleChangeText"];
+            impact?: components["schemas"]["RuleChangeText"];
+            citation: components["schemas"]["RuleChangeCitation"];
+            publishedOn?: components["schemas"]["CivilDate"];
+            effectiveFrom: components["schemas"]["CivilDate"];
+            effectiveTo?: components["schemas"]["CivilDate"];
+            originRef?: components["schemas"]["RuleChangeRef"];
+            supersedes?: components["schemas"]["RuleChangeId"];
+            testEvidence?: components["schemas"]["RuleChangeTestEvidence"];
+        };
+        /** RuleChangeTestEvidenceRequest */
+        RuleChangeTestEvidenceRequest: {
+            testEvidence: components["schemas"]["RuleChangeTestEvidence"];
+            /**
+             * Format: int32
+             * @description The `revision` that was read.
+             */
+            expectedRevision: number;
+        };
+        /** RuleChangeTransitionRequest */
+        RuleChangeTransitionRequest: {
+            to: components["schemas"]["RuleChangeStatus"];
+            /**
+             * Format: int32
+             * @description The `revision` that was read. Anything recorded since is `VERSION_CONFLICT`.
+             */
+            expectedRevision: number;
+            reason: components["schemas"]["EvidenceText"];
+        };
+        /**
+         * CrosswalkVersionNumber
+         * Format: int32
+         * @description A crosswalk version number.
+         * @example 1
+         */
+        CrosswalkVersionNumber: number;
+        /**
+         * EntitlementId
+         * Format: uuid
+         * @description An entitlement grant.
+         * @example 01920e10-1a2b-7c3d-8e4f-5a6b7c8d9e01
+         */
+        EntitlementId: string;
+        /**
+         * SubscriptionPlanId
+         * Format: uuid
+         * @description A subscription plan revision.
+         * @example 01920e20-1a2b-7c3d-8e4f-5a6b7c8d9e01
+         */
+        SubscriptionPlanId: string;
+        /**
+         * ContractReference
+         * @description The signed contract, schedule or revision a right or plan comes from, as the contract names it.
+         * @example MSA-2026-014
+         */
+        ContractReference: string;
+        /**
+         * CommercialText
+         * @description A reason or note from the administrator acting.
+         */
+        CommercialText: string;
+        /**
+         * EntitlementMode
+         * @description The operating mode (Doc 18 §02). Each is a separate right and none
+         *     implies another: `NATIVE` carries `QUOTE`, `COMMIT`, `FILE`, `REMIT`
+         *     and `E_INVOICE`; `FEDERATED` and `OEM_EMBEDDED` carry `QUOTE` and
+         *     `COMMIT`; `SHADOW_ASSURANCE` carries only `SHADOW_COMPARE`;
+         *     `MANAGED_COMPLIANCE` carries `FILE` and `REMIT`.
+         * @enum {string}
+         */
+        EntitlementMode: "NATIVE" | "FEDERATED" | "SHADOW_ASSURANCE" | "OEM_EMBEDDED" | "MANAGED_COMPLIANCE";
+        /**
+         * EntitlementOperation
+         * @description What the grant permits. A quote right is not a commit right; a calculation right is not a filing right.
+         * @enum {string}
+         */
+        EntitlementOperation: "QUOTE" | "COMMIT" | "FILE" | "REMIT" | "E_INVOICE" | "SHADOW_COMPARE";
+        /**
+         * EntitlementLifecycle
+         * @description The stored state, the fold of the grant's events.
+         * @enum {string}
+         */
+        EntitlementLifecycle: "DRAFT" | "IN_REVIEW" | "APPROVED" | "REJECTED" | "WITHDRAWN" | "SUSPENDED" | "REVOKED";
+        /**
+         * EntitlementStatus
+         * @description The grant read against today's UTC date. An `APPROVED` grant is
+         *     `SCHEDULED` before it runs, `ACTIVE` while it runs and `EXPIRED` after
+         *     its end date; `SUSPENDED` trumps `ACTIVE`.
+         * @enum {string}
+         */
+        EntitlementStatus: "DRAFT" | "IN_REVIEW" | "SCHEDULED" | "ACTIVE" | "SUSPENDED" | "EXPIRED" | "REJECTED" | "WITHDRAWN" | "REVOKED";
+        /**
+         * EntitlementEffective
+         * @description Whether the right can be used now. `ACTIVE` is an active grant over
+         *     coverage the cell proves; `RESTRICTED` is an active grant it does not
+         *     prove; `PENDING` is recorded, in review or scheduled; `ENDED` is
+         *     rejected, withdrawn or revoked.
+         * @enum {string}
+         */
+        EntitlementEffective: "PENDING" | "ACTIVE" | "RESTRICTED" | "SUSPENDED" | "EXPIRED" | "ENDED";
+        /**
+         * EntitlementDecision
+         * @description The effective-capability decision. Anything false, unknown or unproven is `DENY`.
+         * @enum {string}
+         */
+        EntitlementDecision: "ALLOW" | "DENY";
+        /**
+         * EntitlementReason
+         * @description Why a grant is pending or blocked. The coverage reasons are Doc 18
+         *     §06's: `CONTENT_NOT_ACTIVE` (no content in force for the service
+         *     there, or a research profile only), `OPERATION_NOT_SUPPORTED` (the
+         *     filing gate or the e-invoicing adapter is not there),
+         *     `TECHNICALLY_UNAVAILABLE` (an advisory cell cannot commit),
+         *     `GEOGRAPHY_NOT_PROVEN` (coverage is proven per country, not per
+         *     subdivision) and `PROVIDER_EVIDENCE_ABSENT` (a federated provider's
+         *     coverage is not evidenced).
+         * @enum {string}
+         */
+        EntitlementReason: "AWAITING_SUBMISSION" | "AWAITING_SECOND_APPROVAL" | "AWAITING_EFFECTIVE_DATE" | "ENTITLEMENT_SUSPENDED" | "RESUME_AWAITING_APPROVAL" | "ENTITLEMENT_EXPIRED" | "ENTITLEMENT_ENDED" | "CONTENT_NOT_ACTIVE" | "OPERATION_NOT_SUPPORTED" | "TECHNICALLY_UNAVAILABLE" | "GEOGRAPHY_NOT_PROVEN" | "PROVIDER_EVIDENCE_ABSENT";
+        /**
+         * EntitlementCoverageState
+         * @enum {string}
+         */
+        EntitlementCoverageState: "VERIFIED" | "UNPROVEN";
+        /**
+         * EntitlementMarketStatus
+         * @description The market's verified coverage status, or `NOT_LISTED` for a country neither the research catalogue nor content names.
+         * @enum {string}
+         */
+        EntitlementMarketStatus: "ACTIVE" | "PILOT" | "RESEARCH_ONLY" | "NOT_LISTED";
+        /**
+         * EntitlementEventKind
+         * @enum {string}
+         */
+        EntitlementEventKind: "CREATED" | "SUBMITTED" | "APPROVED" | "REJECTED" | "WITHDRAWN" | "SUSPENDED" | "RESUME_REQUESTED" | "RESUMED" | "REVOKED";
+        /**
+         * EntitlementAction
+         * @enum {string}
+         */
+        EntitlementAction: "SUBMIT" | "APPROVE" | "REJECT" | "WITHDRAW" | "SUSPEND" | "REQUEST_RESUME" | "RESUME" | "REVOKE";
+        /**
+         * EntitlementFinding
+         * @description One reason a grant is pending or blocked, with what a person reads about it.
+         */
+        EntitlementFinding: {
+            reason: components["schemas"]["EntitlementReason"];
+            /** @description Plain language, written by the cell. */
+            detail: string;
+        };
+        /**
+         * EntitlementFilingGate
+         * @description The legal filing gate for the grant's legal entity in its country.
+         */
+        EntitlementFilingGate: {
+            ready: boolean;
+            /** @description The authority whose gate is ready, or the first considered when none is. */
+            authority?: string;
+            /** @description The gate's blocking reason when it is not ready. */
+            reason?: string;
+        };
+        /**
+         * EntitlementCoverage
+         * @description What the cell proves for the grant's scope, read now. Never stored; never set by the grant.
+         */
+        EntitlementCoverage: {
+            state: components["schemas"]["EntitlementCoverageState"];
+            marketStatus: components["schemas"]["EntitlementMarketStatus"];
+            marketReason?: components["schemas"]["DashboardMarketReason"];
+            research?: components["schemas"]["DashboardResearch"];
+            servicesInForce: components["schemas"]["ServiceFamily"][];
+            filing?: components["schemas"]["EntitlementFilingGate"];
+            findings: components["schemas"]["EntitlementFinding"][];
+        };
+        /** EntitlementEvent */
+        EntitlementEvent: {
+            /** Format: int32 */
+            seq: number;
+            kind: components["schemas"]["EntitlementEventKind"];
+            lifecycle: components["schemas"]["EntitlementLifecycle"];
+            reason?: components["schemas"]["CommercialText"];
+            recordedAt: components["schemas"]["Timestamp"];
+            recordedBy: components["schemas"]["EvidenceActor"];
+        };
+        /**
+         * Entitlement
+         * @description One entitlement grant as of `asOf`, beside the coverage the cell
+         *     proves for it. `findings` lists every reason it is pending or
+         *     blocked — its own lifecycle first, then coverage's — and is empty only
+         *     when `decision` is `ALLOW`. `actions` are the actions its lifecycle
+         *     allows; the server still compares the people.
+         */
+        Entitlement: {
+            id: components["schemas"]["EntitlementId"];
+            legalEntityId: components["schemas"]["LegalEntityId"];
+            jurisdiction: components["schemas"]["EvidenceJurisdiction"];
+            country: components["schemas"]["CountryCode"];
+            service: components["schemas"]["ServiceFamily"];
+            mode: components["schemas"]["EntitlementMode"];
+            operation: components["schemas"]["EntitlementOperation"];
+            effectiveFrom: components["schemas"]["CivilDate"];
+            effectiveTo?: components["schemas"]["CivilDate"];
+            activeFrom?: components["schemas"]["CivilDate"];
+            contractRef: components["schemas"]["ContractReference"];
+            contractRevision?: components["schemas"]["ContractReference"];
+            lifecycle: components["schemas"]["EntitlementLifecycle"];
+            status: components["schemas"]["EntitlementStatus"];
+            effective: components["schemas"]["EntitlementEffective"];
+            decision: components["schemas"]["EntitlementDecision"];
+            /** @description An approved grant, active or scheduled, whose coverage the cell does not prove. */
+            mismatch: boolean;
+            findings: components["schemas"]["EntitlementFinding"][];
+            coverage: components["schemas"]["EntitlementCoverage"];
+            /**
+             * Format: int32
+             * @description The number of events recorded. An action names it.
+             */
+            version: number;
+            actions: components["schemas"]["EntitlementAction"][];
+            submittedBy?: components["schemas"]["EvidenceActor"];
+            approvedBy?: components["schemas"]["EvidenceActor"];
+            approvedAt?: components["schemas"]["Timestamp"];
+            history: components["schemas"]["EntitlementEvent"][];
+            asOf: components["schemas"]["Timestamp"];
+            createdAt: components["schemas"]["Timestamp"];
+            createdBy: components["schemas"]["EvidenceActor"];
+        };
+        /** EntitlementList */
+        EntitlementList: {
+            entitlements: components["schemas"]["Entitlement"][];
+            markets: components["schemas"]["DashboardMarket"][];
+            /** @description The research catalogue's version, absent when the cell has none. */
+            catalogue?: string;
+            /** @description Whether the cell may emit authoritative output. */
+            authoritative: boolean;
+            asOf: components["schemas"]["Timestamp"];
+        };
+        /** EntitlementRequest */
+        EntitlementRequest: {
+            legalEntityId?: components["schemas"]["LegalEntityId"];
+            jurisdiction: components["schemas"]["EvidenceJurisdiction"];
+            service: components["schemas"]["ServiceFamily"];
+            mode: components["schemas"]["EntitlementMode"];
+            operation: components["schemas"]["EntitlementOperation"];
+            effectiveFrom: components["schemas"]["CivilDate"];
+            effectiveTo?: components["schemas"]["CivilDate"];
+            contractRef: components["schemas"]["ContractReference"];
+            contractRevision?: components["schemas"]["ContractReference"];
+            /** @description Submit for review now. Otherwise the grant is kept as a DRAFT. */
+            submit?: boolean;
+        };
+        /** EntitlementActionRequest */
+        EntitlementActionRequest: {
+            action: components["schemas"]["EntitlementAction"];
+            /**
+             * Format: int32
+             * @description The `version` that was read. Anything recorded since is `VERSION_CONFLICT`.
+             */
+            expectedVersion: number;
+            reason?: components["schemas"]["CommercialText"];
+        };
+        /**
+         * UsageMeter
+         * @description A metered capability. Each counts one kind of row the cell itself writes.
+         * @enum {string}
+         */
+        UsageMeter: "COMMITTED_DECISIONS" | "FISCAL_DOCUMENTS" | "FILING_SUBMISSIONS" | "SHADOW_RUNS";
+        /**
+         * UsageOveragePolicy
+         * @description What the contract says happens past the included quantity. Reported, not enforced, by this cell.
+         * @enum {string}
+         */
+        UsageOveragePolicy: "ALLOW_OVERAGE" | "HARD_LIMIT";
+        /**
+         * UsageCount
+         * Format: int64
+         * @description An exact count of rows or an included quantity. Never an amount.
+         * @example 12
+         */
+        UsageCount: number;
+        /**
+         * SubscriptionPlanStatus
+         * @enum {string}
+         */
+        SubscriptionPlanStatus: "PROPOSED" | "APPROVED" | "REJECTED" | "WITHDRAWN";
+        /**
+         * SubscriptionPlanAction
+         * @enum {string}
+         */
+        SubscriptionPlanAction: "APPROVE" | "REJECT" | "WITHDRAW";
+        /**
+         * SubscriptionPlanEventKind
+         * @enum {string}
+         */
+        SubscriptionPlanEventKind: "PROPOSED" | "APPROVED" | "REJECTED" | "WITHDRAWN";
+        /**
+         * SubscriptionPlanCode
+         * @example PILOT-2026
+         */
+        SubscriptionPlanCode: string;
+        /**
+         * SubscriptionPlanName
+         * @example Pilot 2026
+         */
+        SubscriptionPlanName: string;
+        /**
+         * SubscriptionQuota
+         * @description One metered capability's included quantity per monthly period.
+         */
+        SubscriptionQuota: {
+            meter: components["schemas"]["UsageMeter"];
+            included: components["schemas"]["UsageCount"];
+            overage: components["schemas"]["UsageOveragePolicy"];
+        };
+        /** SubscriptionPlanEvent */
+        SubscriptionPlanEvent: {
+            /** Format: int32 */
+            seq: number;
+            kind: components["schemas"]["SubscriptionPlanEventKind"];
+            status: components["schemas"]["SubscriptionPlanStatus"];
+            reason?: components["schemas"]["CommercialText"];
+            recordedAt: components["schemas"]["Timestamp"];
+            recordedBy: components["schemas"]["EvidenceActor"];
+        };
+        /**
+         * SubscriptionPlan
+         * @description A subscription plan revision. No price; it grants no entitlement and changes no tax result.
+         */
+        SubscriptionPlan: {
+            id: components["schemas"]["SubscriptionPlanId"];
+            planCode: components["schemas"]["SubscriptionPlanCode"];
+            planName: components["schemas"]["SubscriptionPlanName"];
+            contractRef: components["schemas"]["ContractReference"];
+            termStart: components["schemas"]["CivilDate"];
+            termEnd?: components["schemas"]["CivilDate"];
+            quotas: components["schemas"]["SubscriptionQuota"][];
+            status: components["schemas"]["SubscriptionPlanStatus"];
+            /** @description Whether this is the plan in force on `asOf`'s UTC date. */
+            inForce: boolean;
+            /** Format: int32 */
+            version: number;
+            approvedBy?: components["schemas"]["EvidenceActor"];
+            approvedAt?: components["schemas"]["Timestamp"];
+            history: components["schemas"]["SubscriptionPlanEvent"][];
+            asOf: components["schemas"]["Timestamp"];
+            createdAt: components["schemas"]["Timestamp"];
+            createdBy: components["schemas"]["EvidenceActor"];
+        };
+        /**
+         * UsageMeterDefinition
+         * @description What a meter counts, from which table, by which rule.
+         */
+        UsageMeterDefinition: {
+            meter: components["schemas"]["UsageMeter"];
+            unit: string;
+            /** @description The table the rows are counted from. */
+            source: string;
+            /** @description The counting rule in words. */
+            rule: string;
+        };
+        /** SubscriptionPlanList */
+        SubscriptionPlanList: {
+            plans: components["schemas"]["SubscriptionPlan"][];
+            inForcePlanId?: components["schemas"]["SubscriptionPlanId"];
+            meters: components["schemas"]["UsageMeterDefinition"][];
+            definitionsVersion: string;
+            asOf: components["schemas"]["Timestamp"];
+        };
+        /** SubscriptionPlanRequest */
+        SubscriptionPlanRequest: {
+            planCode: components["schemas"]["SubscriptionPlanCode"];
+            planName: components["schemas"]["SubscriptionPlanName"];
+            contractRef: components["schemas"]["ContractReference"];
+            termStart: components["schemas"]["CivilDate"];
+            termEnd?: components["schemas"]["CivilDate"];
+            quotas: components["schemas"]["SubscriptionQuota"][];
+        };
+        /** SubscriptionPlanActionRequest */
+        SubscriptionPlanActionRequest: {
+            action: components["schemas"]["SubscriptionPlanAction"];
+            /** Format: int32 */
+            expectedVersion: number;
+            reason?: components["schemas"]["CommercialText"];
+        };
+        /**
+         * UsageState
+         * @description A meter's standing against the plan in force. `NOT_CONTRACTED`: the
+         *     plan does not name the meter, and whether such usage is chargeable is
+         *     for the signed contract, never assumed.
+         * @enum {string}
+         */
+        UsageState: "NO_PLAN" | "NOT_CONTRACTED" | "WITHIN_QUOTA" | "AT_QUOTA" | "OVER_QUOTA";
+        /** UsagePlanRef */
+        UsagePlanRef: {
+            id: components["schemas"]["SubscriptionPlanId"];
+            planCode: components["schemas"]["SubscriptionPlanCode"];
+            planName: components["schemas"]["SubscriptionPlanName"];
+        };
+        /**
+         * UsageLine
+         * @description One meter's count for the period, its basis, and its standing against the plan.
+         */
+        UsageLine: {
+            meter: components["schemas"]["UsageMeter"];
+            unit: string;
+            source: string;
+            rule: string;
+            count: components["schemas"]["UsageCount"];
+            basisDigest: components["schemas"]["Sha256Hex"];
+            state: components["schemas"]["UsageState"];
+            included?: components["schemas"]["UsageCount"];
+            overage?: components["schemas"]["UsageOveragePolicy"];
+            remaining: components["schemas"]["UsageCount"];
+            overageCount: components["schemas"]["UsageCount"];
+        };
+        /** UsageReport */
+        UsageReport: {
+            period: components["schemas"]["LegalPeriod"];
+            from: components["schemas"]["Timestamp"];
+            to: components["schemas"]["Timestamp"];
+            /** @description Whether the period has ended. An open period's counts grow until it does. */
+            complete: boolean;
+            plan?: components["schemas"]["UsagePlanRef"];
+            lines: components["schemas"]["UsageLine"][];
+            definitionsVersion: string;
+            asOf: components["schemas"]["Timestamp"];
+        };
+        /** UsageBasisRow */
+        UsageBasisRow: {
+            /** @description The counted row's identifier, as digested. */
+            id: string;
+            at: components["schemas"]["Timestamp"];
+        };
+        /** UsageBasis */
+        UsageBasis: {
+            period: components["schemas"]["LegalPeriod"];
+            from: components["schemas"]["Timestamp"];
+            to: components["schemas"]["Timestamp"];
+            meter: components["schemas"]["UsageMeter"];
+            unit: string;
+            source: string;
+            rule: string;
+            count: components["schemas"]["UsageCount"];
+            basisDigest: components["schemas"]["Sha256Hex"];
+            rows: components["schemas"]["UsageBasisRow"][];
+            /** @description Whether `rows` stops short of `count`. */
+            truncated: boolean;
+            asOf: components["schemas"]["Timestamp"];
+        };
+        /**
+         * CTCApplicabilityId
+         * Format: uuid
+         * @description A country applicability record.
+         * @example 01920e10-1a2b-7c3d-8e4f-5a6b7c8d9e01
+         */
+        CTCApplicabilityId: string;
+        /**
+         * CTCValidationId
+         * Format: uuid
+         * @description An immutable format validation report.
+         * @example 01920e20-1a2b-7c3d-8e4f-5a6b7c8d9e01
+         */
+        CTCValidationId: string;
+        /**
+         * CTCSubmissionId
+         * Format: uuid
+         * @description An authority submission. Also the reference every dispatch attempt carries.
+         * @example 01920e30-1a2b-7c3d-8e4f-5a6b7c8d9e01
+         */
+        CTCSubmissionId: string;
+        /**
+         * CTCAttemptId
+         * Format: uuid
+         * @description One dispatch attempt of a submission.
+         * @example 01920e30-1a2b-7c3d-8e4f-5a6b7c8d9e20
+         */
+        CTCAttemptId: string;
+        /**
+         * CTCCountry
+         * @description An ISO 3166-1 alpha-2 country code.
+         * @example IT
+         */
+        CTCCountry: string;
+        /**
+         * CTCDocumentType
+         * @description The fiscal document types an applicability record may name: billing documents and their corrections that a regime projects into an electronic document.
+         * @enum {string}
+         */
+        CTCDocumentType: "INVOICE" | "CREDIT_NOTE" | "DEBIT_NOTE" | "REBILL" | "ADJUSTMENT";
+        /**
+         * CTCBuyerKind
+         * @description Who receives the document. A B2C document is never forced through a B2B rail.
+         * @enum {string}
+         */
+        CTCBuyerKind: "B2B" | "B2G" | "B2C";
+        /**
+         * CTCDuty
+         * @description What a record says a cell owes. A PROHIBITED duty has model NONE and profile NONE.
+         * @enum {string}
+         */
+        CTCDuty: "REQUIRED" | "OPTIONAL" | "PROHIBITED";
+        /**
+         * CTCResolvedDuty
+         * @description What resolution answers: an active record's duty, or REVIEW_BLOCKED.
+         * @enum {string}
+         */
+        CTCResolvedDuty: "REQUIRED" | "OPTIONAL" | "PROHIBITED" | "REVIEW_BLOCKED";
+        /**
+         * CTCModel
+         * @description The control model (Doc 21 §02 clearance_model).
+         * @enum {string}
+         */
+        CTCModel: "CLEARANCE" | "REAL_TIME_REPORTING" | "POST_AUDIT" | "NETWORK_EXCHANGE" | "NONE";
+        /**
+         * CTCProfile
+         * @description The format profile a document is projected into (Doc 21 §08). National profiles are used only in their own country; PEPPOL_BIS_3 is a network profile.
+         * @enum {string}
+         */
+        CTCProfile: "PEPPOL_BIS_3" | "FR_EN16931" | "IT_FATTURAPA" | "PL_KSEF_FA" | "BR_NFCOM_62" | "SA_ZATCA_UBL" | "IN_GST_IRP" | "NONE";
+        /**
+         * CTCApplicabilityStatus
+         * @description Where a record stands. DRAFT and IN_REVIEW are NOT_ACTIVATED; only ACTIVE decides a duty.
+         * @enum {string}
+         */
+        CTCApplicabilityStatus: "DRAFT" | "IN_REVIEW" | "ACTIVE" | "SUSPENDED" | "RETIRED";
+        /**
+         * CTCGate
+         * @description Doc 21 §11's release gates.
+         * @enum {string}
+         */
+        CTCGate: "G0_SCOPE_AUTHORITY" | "G1_LEGAL_CONTENT_RIGHTS" | "G2_TECHNICAL_QA" | "G3_SECURITY_OPERATIONS" | "G4_CONTROLLED_PRODUCTION";
+        /**
+         * CTCApplicabilityEventKind
+         * @description What happened to a record.
+         * @enum {string}
+         */
+        CTCApplicabilityEventKind: "CREATED" | "REVISED" | "EVIDENCE_ADDED" | "SUBMITTED" | "RETURNED" | "GATE_SIGNED" | "ACTIVATED" | "SUSPENDED" | "RESUMED" | "RETIRED";
+        /**
+         * CTCAction
+         * @description A move of a record a person asks for.
+         * @enum {string}
+         */
+        CTCAction: "SUBMIT" | "RETURN" | "ACTIVATE" | "SUSPEND" | "RESUME" | "RETIRE";
+        /**
+         * CTCText
+         * @description A short regulatory label: an authority, a format version.
+         */
+        CTCText: string;
+        /**
+         * CTCLegalSource
+         * @description The legal source and reference a duty rests on. Regulatory text, not personal data.
+         */
+        CTCLegalSource: string;
+        /**
+         * CTCReference
+         * @description Another system's reference: a sign-off ticket, a transport receipt, an authority document id or code.
+         */
+        CTCReference: string;
+        /**
+         * CTCAmount
+         * @description A committed fiscal document's figure in canonical decimal string form — never a JSON number, never computed by a client.
+         * @example 122.00
+         */
+        CTCAmount: string;
+        /**
+         * CTCTerms
+         * @description One version of what a cell owes.
+         */
+        CTCTerms: {
+            duty: components["schemas"]["CTCDuty"];
+            model: components["schemas"]["CTCModel"];
+            profile: components["schemas"]["CTCProfile"];
+            formatVersion?: components["schemas"]["CTCText"];
+            authority: components["schemas"]["CTCText"];
+            legalSource: components["schemas"]["CTCLegalSource"];
+            sourceAsOf: components["schemas"]["CivilDate"];
+            effectiveFrom: components["schemas"]["CivilDate"];
+            effectiveTo?: components["schemas"]["CivilDate"];
+            conditions?: components["schemas"]["EvidenceText"];
+        };
+        /**
+         * CTCTermsVersion
+         * @description A recorded version of a record's terms. Never edited.
+         */
+        CTCTermsVersion: {
+            /** Format: int32 */
+            version: number;
+            terms: components["schemas"]["CTCTerms"];
+            digest: components["schemas"]["Digest"];
+            recordedAt: components["schemas"]["Timestamp"];
+            /** Format: uuid */
+            recordedBy: string;
+        };
+        /**
+         * CTCGateSignoff
+         * @description A gate signed on an exact version.
+         */
+        CTCGateSignoff: {
+            gate: components["schemas"]["CTCGate"];
+            /** Format: int32 */
+            version: number;
+            signoffRef: components["schemas"]["CTCReference"];
+            note?: components["schemas"]["EvidenceText"];
+            signedAt: components["schemas"]["Timestamp"];
+            /** Format: uuid */
+            signedBy: string;
+        };
+        /**
+         * CTCApplicabilityEvent
+         * @description One appended act on a record.
+         */
+        CTCApplicabilityEvent: {
+            /** Format: int32 */
+            seq: number;
+            kind: components["schemas"]["CTCApplicabilityEventKind"];
+            status: components["schemas"]["CTCApplicabilityStatus"];
+            /** Format: int32 */
+            version?: number;
+            gate?: components["schemas"]["CTCGate"];
+            signoffRef?: components["schemas"]["CTCReference"];
+            reason?: components["schemas"]["EvidenceText"];
+            evidence?: components["schemas"]["EvidenceDocument"];
+            recordedAt: components["schemas"]["Timestamp"];
+            /** Format: uuid */
+            recordedBy: string;
+        };
+        /**
+         * CTCApplicability
+         * @description A country applicability record (Doc 21 W01, W20): one legal entity, country, document type and buyer kind, with versioned terms, sign-offs, evidence and history.
+         */
+        CTCApplicability: {
+            id: components["schemas"]["CTCApplicabilityId"];
+            legalEntityId: components["schemas"]["LegalEntityId"];
+            country: components["schemas"]["CTCCountry"];
+            documentType: components["schemas"]["CTCDocumentType"];
+            buyerKind: components["schemas"]["CTCBuyerKind"];
+            status: components["schemas"]["CTCApplicabilityStatus"];
+            /** Format: int32 */
+            currentVersion: number;
+            terms: components["schemas"]["CTCTerms"];
+            versions: components["schemas"]["CTCTermsVersion"][];
+            /** @description The gates the current version's duty needs. */
+            requiredGates: components["schemas"]["CTCGate"][];
+            /** @description The required gates not yet signed on the current version. */
+            missingGates: components["schemas"]["CTCGate"][];
+            /** @description The sign-offs on the current version. */
+            signoffs: components["schemas"]["CTCGateSignoff"][];
+            evidence: components["schemas"]["EvidenceDocument"][];
+            history: components["schemas"]["CTCApplicabilityEvent"][];
+            createdAt: components["schemas"]["Timestamp"];
+            /** Format: uuid */
+            createdBy: string;
+        };
+        /**
+         * CTCApplicabilityList
+         * @description Country applicability records.
+         */
+        CTCApplicabilityList: {
+            records: components["schemas"]["CTCApplicability"][];
+        };
+        /**
+         * CTCApplicabilityRequest
+         * @description A record to create.
+         */
+        CTCApplicabilityRequest: {
+            legalEntityId?: components["schemas"]["LegalEntityId"];
+            country: components["schemas"]["CTCCountry"];
+            documentType: components["schemas"]["CTCDocumentType"];
+            buyerKind: components["schemas"]["CTCBuyerKind"];
+            terms: components["schemas"]["CTCTerms"];
+        };
+        /**
+         * CTCGateRequest
+         * @description A gate sign-off.
+         */
+        CTCGateRequest: {
+            gate: components["schemas"]["CTCGate"];
+            /**
+             * Format: int32
+             * @description The version reviewed. Any other is VERSION_CONFLICT.
+             */
+            version: number;
+            signoffRef: components["schemas"]["CTCReference"];
+            note?: components["schemas"]["EvidenceText"];
+        };
+        /**
+         * CTCTransitionRequest
+         * @description A move of a record.
+         */
+        CTCTransitionRequest: {
+            action: components["schemas"]["CTCAction"];
+            /**
+             * Format: int32
+             * @description The version an activation is on.
+             */
+            version?: number;
+            reason?: components["schemas"]["EvidenceText"];
+        };
+        /**
+         * CTCResolution
+         * @description What a cell owes on a date. No side effect.
+         */
+        CTCResolution: {
+            legalEntityId: components["schemas"]["LegalEntityId"];
+            country: components["schemas"]["CTCCountry"];
+            documentType: components["schemas"]["CTCDocumentType"];
+            buyerKind: components["schemas"]["CTCBuyerKind"];
+            date: components["schemas"]["CivilDate"];
+            duty: components["schemas"]["CTCResolvedDuty"];
+            /** @description Whether documents of the cell may be validated and submitted: the duty is REQUIRED or OPTIONAL. */
+            dispatchPermitted: boolean;
+            reasonCode?: components["schemas"]["ReasonCode"];
+            detail: string;
+            applicabilityId?: components["schemas"]["CTCApplicabilityId"];
+            /** Format: int32 */
+            applicabilityVersion?: number;
+            applicabilityStatus?: components["schemas"]["CTCApplicabilityStatus"];
+            terms?: components["schemas"]["CTCTerms"];
+        };
+        /**
+         * CTCRuleStage
+         * @description The validation stage a rule belongs to.
+         * @enum {string}
+         */
+        CTCRuleStage: "APPLICABILITY" | "SEMANTIC" | "REGIME" | "SYNTAX";
+        /**
+         * CTCRuleSeverity
+         * @description FATAL blocks submission and is never waived; WARNING is reported.
+         * @enum {string}
+         */
+        CTCRuleSeverity: "FATAL" | "WARNING";
+        /**
+         * CTCRuleOutcome
+         * @description One rule's result. NOT_EVALUATED is never a pass.
+         * @enum {string}
+         */
+        CTCRuleOutcome: "PASS" | "FAIL" | "NOT_EVALUATED";
+        /**
+         * CTCValidationOutcome
+         * @description PASSED means no FATAL rule failed. It is not certification.
+         * @enum {string}
+         */
+        CTCValidationOutcome: "PASSED" | "FAILED";
+        /**
+         * CTCRuleResult
+         * @description One rule's result on one document.
+         */
+        CTCRuleResult: {
+            ruleId: string;
+            stage: components["schemas"]["CTCRuleStage"];
+            severity: components["schemas"]["CTCRuleSeverity"];
+            outcome: components["schemas"]["CTCRuleOutcome"];
+            reasonCode?: components["schemas"]["ReasonCode"];
+            businessTerm?: string;
+            detail?: string;
+        };
+        /**
+         * CTCValidation
+         * @description An immutable format validation report (Doc 21 W06).
+         */
+        CTCValidation: {
+            id: components["schemas"]["CTCValidationId"];
+            documentId: components["schemas"]["DocumentId"];
+            applicabilityId: components["schemas"]["CTCApplicabilityId"];
+            /** Format: int32 */
+            applicabilityVersion: number;
+            profile: components["schemas"]["CTCProfile"];
+            formatVersion?: components["schemas"]["CTCText"];
+            /** @description The ruleset version the rules ran under. */
+            ruleset: string;
+            inputDigest: components["schemas"]["Digest"];
+            outcome: components["schemas"]["CTCValidationOutcome"];
+            /** Format: int32 */
+            fatalFailures: number;
+            /** @description Whether the official schema and Schematron stage ran. Always false here: no licensed bundle is installed. */
+            schemaValidated: boolean;
+            results: components["schemas"]["CTCRuleResult"][];
+            digest: components["schemas"]["Digest"];
+            validatedAt: components["schemas"]["Timestamp"];
+            /** Format: uuid */
+            validatedBy: string;
+        };
+        /**
+         * CTCValidationList
+         * @description Validation reports.
+         */
+        CTCValidationList: {
+            validations: components["schemas"]["CTCValidation"][];
+        };
+        /**
+         * CTCValidationRequest
+         * @description A document to validate under a record.
+         */
+        CTCValidationRequest: {
+            documentId: components["schemas"]["DocumentId"];
+            applicabilityId: components["schemas"]["CTCApplicabilityId"];
+        };
+        /**
+         * CTCSubmissionStatus
+         * @description Where a submission stands (Doc 21 §06). TRANSPORT_RECEIVED is not acceptance.
+         * @enum {string}
+         */
+        CTCSubmissionStatus: "PREPARED" | "SENT" | "TRANSPORT_RECEIVED" | "AUTHORITY_ACCEPTED" | "AUTHORITY_REJECTED" | "UNCERTAIN_EXTERNAL_STATE" | "WITHDRAWN";
+        /**
+         * CTCSubmissionEventKind
+         * @description What happened to a submission.
+         * @enum {string}
+         */
+        CTCSubmissionEventKind: "PREPARED" | "DISPATCHED" | "TRANSPORT_RECEIVED" | "AUTHORITY_ACCEPTED" | "AUTHORITY_REJECTED" | "OUTCOME_UNKNOWN" | "STATUS_NOT_FOUND" | "WITHDRAWN";
+        /**
+         * CTCResponseKind
+         * @description An answer a person records.
+         * @enum {string}
+         */
+        CTCResponseKind: "TRANSPORT_RECEIVED" | "AUTHORITY_ACCEPTED" | "AUTHORITY_REJECTED" | "OUTCOME_UNKNOWN" | "STATUS_NOT_FOUND";
+        /**
+         * CTCSubmissionEvent
+         * @description One appended act on a submission.
+         */
+        CTCSubmissionEvent: {
+            /** Format: int32 */
+            seq: number;
+            kind: components["schemas"]["CTCSubmissionEventKind"];
+            status: components["schemas"]["CTCSubmissionStatus"];
+            attemptId?: components["schemas"]["CTCAttemptId"];
+            transportRef?: components["schemas"]["CTCReference"];
+            authorityRef?: components["schemas"]["CTCReference"];
+            authorityCode?: components["schemas"]["CTCReference"];
+            evidenceSha256?: components["schemas"]["Sha256Hex"];
+            detail?: components["schemas"]["EvidenceText"];
+            recordedAt: components["schemas"]["Timestamp"];
+            /** Format: uuid */
+            recordedBy: string;
+        };
+        /**
+         * CTCCorrectionTask
+         * @description What an authority rejection opens: the rejected document is corrected through the fiscal corrections flow by a new document naming it, never edited. Open until one exists.
+         */
+        CTCCorrectionTask: {
+            documentId: components["schemas"]["DocumentId"];
+            open: boolean;
+            openedAt: components["schemas"]["Timestamp"];
+            authorityCode?: components["schemas"]["CTCReference"];
+            reason?: components["schemas"]["EvidenceText"];
+            /** @description Committed documents naming the rejected one as their predecessor. */
+            correctedBy: components["schemas"]["DocumentId"][];
+        };
+        /**
+         * CTCSubmission
+         * @description An authority submission of a fiscal document under a record version (Doc 21 W14, W15).
+         */
+        CTCSubmission: {
+            id: components["schemas"]["CTCSubmissionId"];
+            documentId: components["schemas"]["DocumentId"];
+            /** @description The legal, customer-visible document number. */
+            documentNumber?: string;
+            documentType: components["schemas"]["CTCDocumentType"];
+            legalEntityId: components["schemas"]["LegalEntityId"];
+            country: components["schemas"]["CTCCountry"];
+            buyerKind: components["schemas"]["CTCBuyerKind"];
+            applicabilityId: components["schemas"]["CTCApplicabilityId"];
+            /** Format: int32 */
+            applicabilityVersion: number;
+            model: components["schemas"]["CTCModel"];
+            profile: components["schemas"]["CTCProfile"];
+            formatVersion?: components["schemas"]["CTCText"];
+            validationId: components["schemas"]["CTCValidationId"];
+            currency: components["schemas"]["CurrencyCode"];
+            gross: components["schemas"]["CTCAmount"];
+            payloadDigest: components["schemas"]["Digest"];
+            /** @description The reference every attempt carries, and a status enquiry asks by. Never changes across attempts. */
+            externalRef: string;
+            preparedAt: components["schemas"]["Timestamp"];
+            /** Format: uuid */
+            preparedBy: string;
+            status: components["schemas"]["CTCSubmissionStatus"];
+            history: components["schemas"]["CTCSubmissionEvent"][];
+            correction?: components["schemas"]["CTCCorrectionTask"];
+        };
+        /**
+         * CTCSubmissionList
+         * @description Submissions.
+         */
+        CTCSubmissionList: {
+            submissions: components["schemas"]["CTCSubmission"][];
+        };
+        /**
+         * CTCSubmissionRequest
+         * @description A document to submit under a record.
+         */
+        CTCSubmissionRequest: {
+            documentId: components["schemas"]["DocumentId"];
+            applicabilityId: components["schemas"]["CTCApplicabilityId"];
+        };
+        /**
+         * CTCDispatchRequest
+         * @description A checker's authorisation of a dispatch.
+         */
+        CTCDispatchRequest: {
+            payloadDigest: components["schemas"]["Digest"];
+        };
+        /**
+         * CTCResponseRequest
+         * @description An answer, as a person records it.
+         */
+        CTCResponseRequest: {
+            kind: components["schemas"]["CTCResponseKind"];
+            attemptId: components["schemas"]["CTCAttemptId"];
+            transportRef?: components["schemas"]["CTCReference"];
+            authorityRef?: components["schemas"]["CTCReference"];
+            authorityCode?: components["schemas"]["CTCReference"];
+            evidenceSha256?: components["schemas"]["Sha256Hex"];
+            detail?: components["schemas"]["EvidenceText"];
+        };
+        /**
+         * CTCWithdrawalRequest
+         * @description Why a prepared submission is withdrawn.
+         */
+        CTCWithdrawalRequest: {
+            reason: components["schemas"]["EvidenceText"];
+        };
+        /**
+         * RegulatoryChangeId
+         * Format: uuid
+         * @description A recorded regulatory change. A later rule-approval workflow may reference it.
+         * @example 01920e10-1a2b-7c3d-8e4f-5a6b7c8d9e01
+         */
+        RegulatoryChangeId: string;
+        /**
+         * ImpactAssessmentId
+         * Format: uuid
+         * @example 01920e20-1a2b-7c3d-8e4f-5a6b7c8d9e01
+         */
+        ImpactAssessmentId: string;
+        /**
+         * ReviewRecommendationId
+         * Format: uuid
+         * @description A review recommendation. This is the id a later rule-approval workflow names.
+         * @example 01920e30-1a2b-7c3d-8e4f-5a6b7c8d9e01
+         */
+        ReviewRecommendationId: string;
+        /**
+         * RegulatoryChangeKind
+         * @description The class of legal change (Doc 03 §06). A source with several effects is recorded as one change per kind.
+         * @enum {string}
+         */
+        RegulatoryChangeKind: "NEW_LEVY" | "RATE_CHANGE" | "REPEAL_SUNSET" | "BASE_CHANGE" | "CLASS_CHANGE" | "JURISDICTION_CHANGE" | "BACKDATED_RULE" | "RIGHTS_WITHDRAWAL" | "SOURCE_DISPUTE";
+        /**
+         * RegulatoryChangeStatus
+         * @description `NEW` until triaged; `IN_IMPACT_ASSESSMENT` only by an assessment;
+         *     `ON_HOLD` with a tracked reason; `CLOSED` and `NO_IMPACT` are final, each
+         *     with a disposition and rationale (Doc 03 Z03-AT-09).
+         * @enum {string}
+         */
+        RegulatoryChangeStatus: "NEW" | "TRIAGED" | "IN_IMPACT_ASSESSMENT" | "ON_HOLD" | "CLOSED" | "NO_IMPACT";
+        /**
+         * RegulatoryChangePriority
+         * @description Triage's urgency (Doc 03 §06 monitoring targets).
+         * @enum {string}
+         */
+        RegulatoryChangePriority: "URGENT" | "MATERIAL" | "ORDINARY";
+        /**
+         * RegulatoryChangeDisposition
+         * @description The decision every change ends with (Doc 03 WF-05).
+         * @enum {string}
+         */
+        RegulatoryChangeDisposition: "NOT_APPLICABLE" | "CHANGE_NEEDED" | "MONITOR";
+        /**
+         * RegulatoryChangeHoldReason
+         * @enum {string}
+         */
+        RegulatoryChangeHoldReason: "SOURCE_DISPUTED" | "COUNSEL_QUESTION" | "RIGHTS_HOLD" | "MISSING_FACTS" | "MONITOR_FAILURE";
+        /**
+         * RegulatoryChangeDetector
+         * @description Human legal intake, or a watcher's alert a person recorded. No watcher is connected to this cell.
+         * @enum {string}
+         */
+        RegulatoryChangeDetector: "HUMAN" | "MONITOR";
+        /**
+         * RegulatoryChangeEventKind
+         * @enum {string}
+         */
+        RegulatoryChangeEventKind: "RECORDED" | "TRIAGED" | "ASSESSMENT_STARTED" | "HELD" | "RESUMED" | "CLOSED" | "NO_IMPACT";
+        /**
+         * RegulatoryChangeTitle
+         * @description A headline for the change. About law, not about a person.
+         * @example New York excise on mobile voice rises
+         */
+        RegulatoryChangeTitle: string;
+        /**
+         * RegulatoryChangeSummary
+         * @description Free-text summary of the change from the person recording it.
+         */
+        RegulatoryChangeSummary: string;
+        /**
+         * RegulatoryChangeSourceText
+         * @description An authority, citation, edition or reference, as published.
+         * @example N.Y. Tax Law §186-e
+         */
+        RegulatoryChangeSourceText: string;
+        /**
+         * RegulatoryChangeSourceUrl
+         * @description The source's official https URL.
+         * @example https://www.tax.ny.gov/pubs_and_bulls/tg_bulletins/
+         */
+        RegulatoryChangeSourceUrl: string;
+        /**
+         * RegulatoryChangeCode
+         * @description A tax type code, as the content packs name them.
+         * @example SALES_TAX
+         */
+        RegulatoryChangeCode: string;
+        /**
+         * RegulatoryChangeSource
+         * @description The source edition a change is reported from: its identity (authority,
+         *     citation) and version (edition, the captured document's SHA-256, hashed
+         *     in the browser — the document is not uploaded or stored).
+         */
+        RegulatoryChangeSource: {
+            authority: components["schemas"]["RegulatoryChangeSourceText"];
+            citation: components["schemas"]["RegulatoryChangeSourceText"];
+            url?: components["schemas"]["RegulatoryChangeSourceUrl"];
+            edition: components["schemas"]["RegulatoryChangeSourceText"];
+            documentSha256: components["schemas"]["Sha256Hex"];
+        };
+        /** RegulatoryChangeEvent */
+        RegulatoryChangeEvent: {
+            /** Format: int32 */
+            seq: number;
+            kind: components["schemas"]["RegulatoryChangeEventKind"];
+            status: components["schemas"]["RegulatoryChangeStatus"];
+            priority?: components["schemas"]["RegulatoryChangePriority"];
+            disposition?: components["schemas"]["RegulatoryChangeDisposition"];
+            holdReason?: components["schemas"]["RegulatoryChangeHoldReason"];
+            reason?: components["schemas"]["EvidenceText"];
+            assessmentId?: components["schemas"]["ImpactAssessmentId"];
+            recordedAt: components["schemas"]["Timestamp"];
+            recordedBy: components["schemas"]["EvidenceActor"];
+        };
+        /**
+         * RegulatoryChange
+         * @description A regulatory change as reported, with its triage and disposition. A
+         *     reported change is not a confirmed legal effect, and nothing about it
+         *     changes content or a tax result.
+         */
+        RegulatoryChange: {
+            id: components["schemas"]["RegulatoryChangeId"];
+            jurisdiction: components["schemas"]["EvidenceJurisdiction"];
+            kind: components["schemas"]["RegulatoryChangeKind"];
+            title: components["schemas"]["RegulatoryChangeTitle"];
+            summary?: components["schemas"]["RegulatoryChangeSummary"];
+            source: components["schemas"]["RegulatoryChangeSource"];
+            publishedOn: components["schemas"]["CivilDate"];
+            effectiveFrom: components["schemas"]["CivilDate"];
+            discoveredAt: components["schemas"]["Timestamp"];
+            detectedBy: components["schemas"]["RegulatoryChangeDetector"];
+            monitorRef?: components["schemas"]["RegulatoryChangeSourceText"];
+            serviceFamilies: components["schemas"]["ServiceFamily"][];
+            taxTypes: components["schemas"]["RegulatoryChangeCode"][];
+            /** @description Effective before it was published. */
+            retroactive: boolean;
+            status: components["schemas"]["RegulatoryChangeStatus"];
+            priority?: components["schemas"]["RegulatoryChangePriority"];
+            disposition?: components["schemas"]["RegulatoryChangeDisposition"];
+            holdReason?: components["schemas"]["RegulatoryChangeHoldReason"];
+            resumesTo?: components["schemas"]["RegulatoryChangeStatus"];
+            /**
+             * Format: int32
+             * @description The number of events recorded. An act names it.
+             */
+            version: number;
+            sourceKey: components["schemas"]["Digest"];
+            /** @description The other changes recorded from the same source edition. Empty in a listing. */
+            relatedChangeIds: components["schemas"]["RegulatoryChangeId"][];
+            currentAssessmentId?: components["schemas"]["ImpactAssessmentId"];
+            currentSeverity?: components["schemas"]["ImpactSeverity"];
+            /** Format: int32 */
+            recommendationCount: number;
+            /**
+             * Format: int32
+             * @description Recommendations accepted on the current assessment.
+             */
+            acceptedRecommendationCount: number;
+            history: components["schemas"]["RegulatoryChangeEvent"][];
+            createdAt: components["schemas"]["Timestamp"];
+            createdBy: components["schemas"]["EvidenceActor"];
+        };
+        /** RegulatoryChangeList */
+        RegulatoryChangeList: {
+            changes: components["schemas"]["RegulatoryChange"][];
+        };
+        /** RegulatoryChangeRequest */
+        RegulatoryChangeRequest: {
+            jurisdiction: components["schemas"]["EvidenceJurisdiction"];
+            kind: components["schemas"]["RegulatoryChangeKind"];
+            title: components["schemas"]["RegulatoryChangeTitle"];
+            summary?: components["schemas"]["RegulatoryChangeSummary"];
+            source: components["schemas"]["RegulatoryChangeSource"];
+            publishedOn: components["schemas"]["CivilDate"];
+            effectiveFrom: components["schemas"]["CivilDate"];
+            discoveredAt?: components["schemas"]["Timestamp"];
+            detectedBy: components["schemas"]["RegulatoryChangeDetector"];
+            monitorRef?: components["schemas"]["RegulatoryChangeSourceText"];
+            serviceFamilies?: components["schemas"]["ServiceFamily"][];
+            taxTypes?: components["schemas"]["RegulatoryChangeCode"][];
+        };
+        /** RegulatoryChangeTransitionRequest */
+        RegulatoryChangeTransitionRequest: {
+            to: components["schemas"]["RegulatoryChangeStatus"];
+            priority?: components["schemas"]["RegulatoryChangePriority"];
+            disposition?: components["schemas"]["RegulatoryChangeDisposition"];
+            holdReason?: components["schemas"]["RegulatoryChangeHoldReason"];
+            reason: components["schemas"]["EvidenceText"];
+            /**
+             * Format: int32
+             * @description The `version` that was read. Anything recorded since is `VERSION_CONFLICT`.
+             */
+            expectedVersion: number;
+        };
+        /**
+         * ImpactSeverity
+         * @description How much an impacted item, or a whole assessment, matters. Advisory triage, never an amount.
+         * @enum {string}
+         */
+        ImpactSeverity: "LOW" | "MEDIUM" | "HIGH" | "CRITICAL";
+        /**
+         * ImpactItemKind
+         * @description `CONTENT_COMPONENT` is a component of the active content in scope;
+         *     `COVERAGE_GAP` is the jurisdiction with none; `TENANT_REGISTRATION` and
+         *     `TENANT_OBLIGATION` are the tenant's own records in scope.
+         * @enum {string}
+         */
+        ImpactItemKind: "CONTENT_COMPONENT" | "COVERAGE_GAP" | "TENANT_REGISTRATION" | "TENANT_OBLIGATION";
+        /**
+         * ImpactText
+         * @description A reference, label or basis the assessment generated from content and record identifiers.
+         */
+        ImpactText: string;
+        /** ImpactItem */
+        ImpactItem: {
+            kind: components["schemas"]["ImpactItemKind"];
+            ref: components["schemas"]["ImpactText"];
+            label: components["schemas"]["ImpactText"];
+            jurisdiction: components["schemas"]["ImpactText"];
+            severity: components["schemas"]["ImpactSeverity"];
+            basis: components["schemas"]["ImpactText"];
+            /** @description An obligation period a backdated change reaches back into. */
+            retrospective: boolean;
+        };
+        /**
+         * ImpactAssessment
+         * @description A deterministic impact assessment: the same inputs give the same
+         *     `inputsDigest` and `assessmentDigest`. Advisory; it writes nothing.
+         */
+        ImpactAssessment: {
+            id: components["schemas"]["ImpactAssessmentId"];
+            changeId: components["schemas"]["RegulatoryChangeId"];
+            bundleId: components["schemas"]["ImpactText"];
+            bundleDigest: components["schemas"]["ImpactText"];
+            asOf: components["schemas"]["CivilDate"];
+            severity: components["schemas"]["ImpactSeverity"];
+            retroactive: boolean;
+            /** @description This is the change's newest assessment. */
+            current: boolean;
+            items: components["schemas"]["ImpactItem"][];
+            inputsDigest: components["schemas"]["Digest"];
+            assessmentDigest: components["schemas"]["Digest"];
+            /** Format: int32 */
+            componentsRead: number;
+            /** Format: int32 */
+            registrationsRead: number;
+            /** Format: int32 */
+            obligationsRead: number;
+            createdAt: components["schemas"]["Timestamp"];
+            createdBy: components["schemas"]["EvidenceActor"];
+        };
+        /** ImpactAssessmentList */
+        ImpactAssessmentList: {
+            assessments: components["schemas"]["ImpactAssessment"][];
+        };
+        /**
+         * ReviewRecommendationStatus
+         * @description `ACCEPTED` is an independent reviewer's acceptance and yields a
+         *     hand-off reference only; it is not a rule approval or a release.
+         * @enum {string}
+         */
+        ReviewRecommendationStatus: "DRAFT" | "RECOMMENDED" | "CHANGES_REQUESTED" | "ACCEPTED" | "REJECTED" | "WITHDRAWN";
+        /**
+         * ReviewRecommendationOrigin
+         * @enum {string}
+         */
+        ReviewRecommendationOrigin: "HUMAN" | "AI_ASSISTED";
+        /**
+         * ReviewRecommendationAction
+         * @enum {string}
+         */
+        ReviewRecommendationAction: "UPDATE_RULE" | "ADD_RULE" | "RETIRE_RULE" | "NOTIFY_CUSTOMERS" | "RETROSPECTIVE_REASSESSMENT" | "MONITOR" | "NO_ACTION";
+        /**
+         * ReviewRecommendationEventKind
+         * @enum {string}
+         */
+        ReviewRecommendationEventKind: "DRAFTED" | "REVISED" | "RECOMMENDED" | "CHANGES_REQUESTED" | "ACCEPTED" | "REJECTED" | "WITHDRAWN";
+        /**
+         * ReviewDecision
+         * @enum {string}
+         */
+        ReviewDecision: "ACCEPT" | "REJECT" | "REQUEST_CHANGES";
+        /**
+         * RecommendationAuthorityOutcome
+         * @description The AI authority outcome of the draft. Only A1 (propose) is accepted (ZTAX-AIGOV-001 §4).
+         * @enum {string}
+         */
+        RecommendationAuthorityOutcome: "A1";
+        /**
+         * HandoffRef
+         * @description The opaque reference an accepted recommendation hands a later workflow.
+         * @example ztx-rcr:01920e30-1a2b-7c3d-8e4f-5a6b7c8d9e01:6b86b273ff34fce1
+         */
+        HandoffRef: string;
+        /**
+         * RecommendationAiDraft
+         * @description The model's original text, kept unchanged as evidence.
+         */
+        RecommendationAiDraft: string;
+        /** RecommendationTarget */
+        RecommendationTarget: {
+            kind: components["schemas"]["ImpactItemKind"];
+            ref: components["schemas"]["ImpactText"];
+        };
+        /**
+         * RecommendationAiProvenance
+         * @description What ZTAX-AIGOV-001 §14 requires recorded of an AI-assisted draft.
+         */
+        RecommendationAiProvenance: {
+            useCase: components["schemas"]["RegulatoryChangeSourceText"];
+            modelProfile: components["schemas"]["RegulatoryChangeSourceText"];
+            providerProfile: components["schemas"]["RegulatoryChangeSourceText"];
+            promptProfile: components["schemas"]["RegulatoryChangeSourceText"];
+            aiTrainVersion: components["schemas"]["RegulatoryChangeSourceText"];
+            authorityOutcome: components["schemas"]["RecommendationAuthorityOutcome"];
+            invocationId?: components["schemas"]["RegulatoryChangeSourceText"];
+            draft: components["schemas"]["RecommendationAiDraft"];
+        };
+        /** ReviewRecommendationEvent */
+        ReviewRecommendationEvent: {
+            /** Format: int32 */
+            seq: number;
+            kind: components["schemas"]["ReviewRecommendationEventKind"];
+            status: components["schemas"]["ReviewRecommendationStatus"];
+            action?: components["schemas"]["ReviewRecommendationAction"];
+            rationale?: components["schemas"]["EvidenceText"];
+            targets?: components["schemas"]["RecommendationTarget"][];
+            reason?: components["schemas"]["EvidenceText"];
+            handoffRef?: components["schemas"]["HandoffRef"];
+            recordedAt: components["schemas"]["Timestamp"];
+            recordedBy: components["schemas"]["EvidenceActor"];
+        };
+        /**
+         * ReviewRecommendation
+         * @description A recommendation derived from one assessment, bound to its digest.
+         *     Advisory: acceptance yields `handoffRef` and publishes or changes
+         *     nothing.
+         */
+        ReviewRecommendation: {
+            id: components["schemas"]["ReviewRecommendationId"];
+            changeId: components["schemas"]["RegulatoryChangeId"];
+            assessmentId: components["schemas"]["ImpactAssessmentId"];
+            assessmentDigest: components["schemas"]["Digest"];
+            currentAssessmentId?: components["schemas"]["ImpactAssessmentId"];
+            /** @description Open, and the change has been reassessed since. */
+            stale: boolean;
+            origin: components["schemas"]["ReviewRecommendationOrigin"];
+            ai?: components["schemas"]["RecommendationAiProvenance"];
+            status: components["schemas"]["ReviewRecommendationStatus"];
+            /** Format: int32 */
+            version: number;
+            action: components["schemas"]["ReviewRecommendationAction"];
+            rationale: components["schemas"]["EvidenceText"];
+            targets: components["schemas"]["RecommendationTarget"][];
+            recommendedBy?: components["schemas"]["EvidenceActor"];
+            reviewedBy?: components["schemas"]["EvidenceActor"];
+            handoffRef?: components["schemas"]["HandoffRef"];
+            history: components["schemas"]["ReviewRecommendationEvent"][];
+            createdAt: components["schemas"]["Timestamp"];
+            createdBy: components["schemas"]["EvidenceActor"];
+        };
+        /** ReviewRecommendationList */
+        ReviewRecommendationList: {
+            recommendations: components["schemas"]["ReviewRecommendation"][];
+        };
+        /** ReviewRecommendationRequest */
+        ReviewRecommendationRequest: {
+            assessmentId: components["schemas"]["ImpactAssessmentId"];
+            origin: components["schemas"]["ReviewRecommendationOrigin"];
+            action: components["schemas"]["ReviewRecommendationAction"];
+            rationale: components["schemas"]["EvidenceText"];
+            targets: components["schemas"]["RecommendationTarget"][];
+            ai?: components["schemas"]["RecommendationAiProvenance"];
+        };
+        /** ReviewRecommendationRevisionRequest */
+        ReviewRecommendationRevisionRequest: {
+            action: components["schemas"]["ReviewRecommendationAction"];
+            rationale: components["schemas"]["EvidenceText"];
+            targets: components["schemas"]["RecommendationTarget"][];
+            /** Format: int32 */
+            expectedVersion: number;
+        };
+        /** ReviewRecommendationActRequest */
+        ReviewRecommendationActRequest: {
+            reason: components["schemas"]["EvidenceText"];
+            /** Format: int32 */
+            expectedVersion: number;
+        };
+        /** ReviewRecommendationReviewRequest */
+        ReviewRecommendationReviewRequest: {
+            decision: components["schemas"]["ReviewDecision"];
+            reason: components["schemas"]["EvidenceText"];
+            /** Format: int32 */
+            expectedVersion: number;
+        };
     };
     responses: {
+        /** @description The regulatory change as it stands now. */
+        RegulatoryChangeResult: {
+            headers: {
+                [name: string]: unknown;
+            };
+            content: {
+                "application/json": components["schemas"]["RegulatoryChange"];
+            };
+        };
+        /** @description The impact assessment. */
+        ImpactAssessmentResult: {
+            headers: {
+                [name: string]: unknown;
+            };
+            content: {
+                "application/json": components["schemas"]["ImpactAssessment"];
+            };
+        };
+        /** @description The review recommendation as it stands now. */
+        ReviewRecommendationResult: {
+            headers: {
+                [name: string]: unknown;
+            };
+            content: {
+                "application/json": components["schemas"]["ReviewRecommendation"];
+            };
+        };
         /**
          * @description The idempotency key was reused with a different request, or its first
          *     request is still running. In both cases **the request was not
@@ -10557,8 +13541,59 @@ export interface components {
                 "application/json": components["schemas"]["ExemptionEvidence"];
             };
         };
+        /** @description The crosswalk as it stands now, with every version. */
+        CrosswalkResult: {
+            headers: {
+                [name: string]: unknown;
+            };
+            content: {
+                "application/json": components["schemas"]["Crosswalk"];
+            };
+        };
+        /** @description The proposed rule change as it stands now. */
+        RuleChangeResult: {
+            headers: {
+                [name: string]: unknown;
+            };
+            content: {
+                "application/json": components["schemas"]["RuleChange"];
+            };
+        };
+        /** @description The grant as it reads now. */
+        EntitlementResult: {
+            headers: {
+                [name: string]: unknown;
+            };
+            content: {
+                "application/json": components["schemas"]["Entitlement"];
+            };
+        };
+        /** @description The plan revision as it stands now. */
+        SubscriptionPlanResult: {
+            headers: {
+                [name: string]: unknown;
+            };
+            content: {
+                "application/json": components["schemas"]["SubscriptionPlan"];
+            };
+        };
     };
     parameters: {
+        /**
+         * @description The regulatory change identifier.
+         * @example 01920e10-1a2b-7c3d-8e4f-5a6b7c8d9e01
+         */
+        RegulatoryChangeId: components["schemas"]["RegulatoryChangeId"];
+        /**
+         * @description The impact assessment identifier.
+         * @example 01920e20-1a2b-7c3d-8e4f-5a6b7c8d9e01
+         */
+        ImpactAssessmentId: components["schemas"]["ImpactAssessmentId"];
+        /**
+         * @description The review recommendation identifier.
+         * @example 01920e30-1a2b-7c3d-8e4f-5a6b7c8d9e01
+         */
+        ReviewRecommendationId: components["schemas"]["ReviewRecommendationId"];
         /**
          * @description A key the client mints before the first attempt and reuses, unchanged,
          *     on every retry of the same request (ADR-0013). Opaque to the server: it
@@ -10632,6 +13667,21 @@ export interface components {
          * @example 01920c20-1a2b-7c3d-8e4f-5a6b7c8d9e10
          */
         ERPExportId: components["schemas"]["ERPExportId"];
+        /**
+         * @description The country applicability record identifier.
+         * @example 01920e10-1a2b-7c3d-8e4f-5a6b7c8d9e01
+         */
+        CTCApplicabilityId: components["schemas"]["CTCApplicabilityId"];
+        /**
+         * @description The validation report identifier.
+         * @example 01920e20-1a2b-7c3d-8e4f-5a6b7c8d9e01
+         */
+        CTCValidationId: components["schemas"]["CTCValidationId"];
+        /**
+         * @description The submission identifier.
+         * @example 01920e30-1a2b-7c3d-8e4f-5a6b7c8d9e01
+         */
+        CTCSubmissionId: components["schemas"]["CTCSubmissionId"];
         /**
          * @description The shadow run identifier.
          * @example 01920b50-1a2b-7c3d-8e4f-5a6b7c8d9e01
@@ -10733,6 +13783,26 @@ export interface components {
          * @example 01920d30-1a2b-7c3d-8e4f-5a6b7c8d9e01
          */
         ExemptionEvidenceId: components["schemas"]["ExemptionEvidenceId"];
+        /**
+         * @description The crosswalk identifier.
+         * @example 01920e10-0000-7000-8000-00000000c001
+         */
+        CrosswalkId: components["schemas"]["CrosswalkId"];
+        /**
+         * @description The rule change identifier.
+         * @example 01920e20-0000-7000-8000-00000000d001
+         */
+        RuleChangeId: components["schemas"]["RuleChangeId"];
+        /**
+         * @description The entitlement grant identifier.
+         * @example 01920e10-1a2b-7c3d-8e4f-5a6b7c8d9e01
+         */
+        EntitlementId: components["schemas"]["EntitlementId"];
+        /**
+         * @description The subscription plan revision identifier.
+         * @example 01920e20-1a2b-7c3d-8e4f-5a6b7c8d9e01
+         */
+        SubscriptionPlanId: components["schemas"]["SubscriptionPlanId"];
     };
     requestBodies: never;
     headers: never;
@@ -16905,6 +19975,1848 @@ export interface operations {
         };
         responses: {
             200: components["responses"]["ExemptionEvidenceResult"];
+            400: components["responses"]["Validation"];
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            409: components["responses"]["Conflict"];
+            500: components["responses"]["Internal"];
+            503: components["responses"]["Unavailable"];
+        };
+    };
+    listCrosswalks: {
+        parameters: {
+            query?: {
+                /**
+                 * @description Only crosswalks of this vendor.
+                 * @example SURETAX
+                 */
+                vendor?: components["schemas"]["CrosswalkVendor"];
+                /**
+                 * @description Only crosswalks with a version in this status.
+                 * @example IN_REVIEW
+                 */
+                status?: components["schemas"]["CrosswalkStatus"];
+                /**
+                 * @description Maximum number of items to return. The server caps this independently,
+                 *     so a larger value is not an error and does not return more.
+                 * @example 50
+                 */
+                limit?: components["parameters"]["Limit"];
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The crosswalks. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CrosswalkList"];
+                };
+            };
+            400: components["responses"]["Validation"];
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            500: components["responses"]["Internal"];
+            503: components["responses"]["Unavailable"];
+        };
+    };
+    createCrosswalk: {
+        parameters: {
+            query?: never;
+            header: {
+                /**
+                 * @description A key the client mints before the first attempt and reuses, unchanged,
+                 *     on every retry of the same request (ADR-0013). Opaque to the server: it
+                 *     is compared, never parsed. Scoped to the tenant and to this endpoint, so
+                 *     a key used for a commit can never match an adjust.
+                 * @example 5f0c2a1e-commit-INV-0001-1
+                 */
+                "Idempotency-Key": components["parameters"]["IdempotencyKey"];
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CrosswalkRequest"];
+            };
+        };
+        responses: {
+            200: components["responses"]["CrosswalkResult"];
+            201: components["responses"]["CrosswalkResult"];
+            400: components["responses"]["Validation"];
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            409: components["responses"]["Conflict"];
+            500: components["responses"]["Internal"];
+            503: components["responses"]["Unavailable"];
+        };
+    };
+    getCrosswalk: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /**
+                 * @description The crosswalk identifier.
+                 * @example 01920e10-0000-7000-8000-00000000c001
+                 */
+                crosswalkId: components["parameters"]["CrosswalkId"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: components["responses"]["CrosswalkResult"];
+            400: components["responses"]["Validation"];
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            500: components["responses"]["Internal"];
+            503: components["responses"]["Unavailable"];
+        };
+    };
+    addCrosswalkVersion: {
+        parameters: {
+            query?: never;
+            header: {
+                /**
+                 * @description A key the client mints before the first attempt and reuses, unchanged,
+                 *     on every retry of the same request (ADR-0013). Opaque to the server: it
+                 *     is compared, never parsed. Scoped to the tenant and to this endpoint, so
+                 *     a key used for a commit can never match an adjust.
+                 * @example 5f0c2a1e-commit-INV-0001-1
+                 */
+                "Idempotency-Key": components["parameters"]["IdempotencyKey"];
+            };
+            path: {
+                /**
+                 * @description The crosswalk identifier.
+                 * @example 01920e10-0000-7000-8000-00000000c001
+                 */
+                crosswalkId: components["parameters"]["CrosswalkId"];
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CrosswalkVersionRequest"];
+            };
+        };
+        responses: {
+            200: components["responses"]["CrosswalkResult"];
+            201: components["responses"]["CrosswalkResult"];
+            400: components["responses"]["Validation"];
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            409: components["responses"]["Conflict"];
+            500: components["responses"]["Internal"];
+            503: components["responses"]["Unavailable"];
+        };
+    };
+    transitionCrosswalkVersion: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /**
+                 * @description The crosswalk identifier.
+                 * @example 01920e10-0000-7000-8000-00000000c001
+                 */
+                crosswalkId: components["parameters"]["CrosswalkId"];
+                /**
+                 * @description The crosswalk version number.
+                 * @example 1
+                 */
+                version: components["schemas"]["CrosswalkVersionNumber"];
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ContentTransitionRequest"];
+            };
+        };
+        responses: {
+            200: components["responses"]["CrosswalkResult"];
+            400: components["responses"]["Validation"];
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            409: components["responses"]["Conflict"];
+            500: components["responses"]["Internal"];
+            503: components["responses"]["Unavailable"];
+        };
+    };
+    lookupCrosswalk: {
+        parameters: {
+            query: {
+                /**
+                 * @description The external code, exactly as the vendor emits it.
+                 * @example 010101
+                 */
+                code: components["schemas"]["CrosswalkExternalCode"];
+                /**
+                 * @description The transaction date. Defaults to today.
+                 * @example 2026-11-20
+                 */
+                on?: components["schemas"]["CivilDate"];
+                /**
+                 * @description Resolve against this approved or superseded version instead of the one in use.
+                 * @example 1
+                 */
+                atVersion?: components["schemas"]["CrosswalkVersionNumber"];
+            };
+            header?: never;
+            path: {
+                /**
+                 * @description The crosswalk identifier.
+                 * @example 01920e10-0000-7000-8000-00000000c001
+                 */
+                crosswalkId: components["parameters"]["CrosswalkId"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The lookup. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CrosswalkLookup"];
+                };
+            };
+            400: components["responses"]["Validation"];
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            500: components["responses"]["Internal"];
+            503: components["responses"]["Unavailable"];
+        };
+    };
+    listRuleChanges: {
+        parameters: {
+            query?: {
+                /**
+                 * @description Only changes in this status.
+                 * @example RECOMMENDED
+                 */
+                status?: components["schemas"]["RuleChangeStatus"];
+                /**
+                 * @description Only changes against this rule pack.
+                 * @example US-NY-TELECOM
+                 */
+                packId?: components["schemas"]["RulePackId"];
+                /**
+                 * @description Only changes in this jurisdiction.
+                 * @example US-NY
+                 */
+                jurisdiction?: components["schemas"]["EvidenceJurisdiction"];
+                /**
+                 * @description Maximum number of items to return. The server caps this independently,
+                 *     so a larger value is not an error and does not return more.
+                 * @example 50
+                 */
+                limit?: components["parameters"]["Limit"];
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The queue. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["RuleChangeList"];
+                };
+            };
+            400: components["responses"]["Validation"];
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            500: components["responses"]["Internal"];
+            503: components["responses"]["Unavailable"];
+        };
+    };
+    proposeRuleChange: {
+        parameters: {
+            query?: never;
+            header: {
+                /**
+                 * @description A key the client mints before the first attempt and reuses, unchanged,
+                 *     on every retry of the same request (ADR-0013). Opaque to the server: it
+                 *     is compared, never parsed. Scoped to the tenant and to this endpoint, so
+                 *     a key used for a commit can never match an adjust.
+                 * @example 5f0c2a1e-commit-INV-0001-1
+                 */
+                "Idempotency-Key": components["parameters"]["IdempotencyKey"];
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["RuleChangeRequest"];
+            };
+        };
+        responses: {
+            200: components["responses"]["RuleChangeResult"];
+            201: components["responses"]["RuleChangeResult"];
+            400: components["responses"]["Validation"];
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            409: components["responses"]["Conflict"];
+            500: components["responses"]["Internal"];
+            503: components["responses"]["Unavailable"];
+        };
+    };
+    getRuleChange: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /**
+                 * @description The rule change identifier.
+                 * @example 01920e20-0000-7000-8000-00000000d001
+                 */
+                changeId: components["parameters"]["RuleChangeId"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: components["responses"]["RuleChangeResult"];
+            400: components["responses"]["Validation"];
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            500: components["responses"]["Internal"];
+            503: components["responses"]["Unavailable"];
+        };
+    };
+    recordRuleChangeTestEvidence: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /**
+                 * @description The rule change identifier.
+                 * @example 01920e20-0000-7000-8000-00000000d001
+                 */
+                changeId: components["parameters"]["RuleChangeId"];
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["RuleChangeTestEvidenceRequest"];
+            };
+        };
+        responses: {
+            200: components["responses"]["RuleChangeResult"];
+            400: components["responses"]["Validation"];
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            409: components["responses"]["Conflict"];
+            500: components["responses"]["Internal"];
+            503: components["responses"]["Unavailable"];
+        };
+    };
+    transitionRuleChange: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /**
+                 * @description The rule change identifier.
+                 * @example 01920e20-0000-7000-8000-00000000d001
+                 */
+                changeId: components["parameters"]["RuleChangeId"];
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["RuleChangeTransitionRequest"];
+            };
+        };
+        responses: {
+            200: components["responses"]["RuleChangeResult"];
+            400: components["responses"]["Validation"];
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            409: components["responses"]["Conflict"];
+            500: components["responses"]["Internal"];
+            503: components["responses"]["Unavailable"];
+        };
+    };
+    listEntitlements: {
+        parameters: {
+            query?: {
+                /**
+                 * @description Only grants that read as this status today.
+                 * @example ACTIVE
+                 */
+                status?: components["schemas"]["EntitlementStatus"];
+                /**
+                 * @description Only grants in this effective state.
+                 * @example RESTRICTED
+                 */
+                effective?: components["schemas"]["EntitlementEffective"];
+                /**
+                 * @description Only grants to this legal entity.
+                 * @example 01920a4c-0000-7000-8000-00000000e001
+                 */
+                legalEntityId?: components["schemas"]["LegalEntityId"];
+                /**
+                 * @description Only grants in this country, its subdivisions included.
+                 * @example GB
+                 */
+                country?: components["schemas"]["CountryCode"];
+                /**
+                 * @description Only grants in this mode.
+                 * @example NATIVE
+                 */
+                mode?: components["schemas"]["EntitlementMode"];
+                /**
+                 * @description Only grants for this operation.
+                 * @example FILE
+                 */
+                operation?: components["schemas"]["EntitlementOperation"];
+                /**
+                 * @description Only approved grants whose coverage the cell does not prove.
+                 * @example true
+                 */
+                mismatch?: boolean;
+                /**
+                 * @description Maximum number of items to return. The server caps this independently,
+                 *     so a larger value is not an error and does not return more.
+                 * @example 50
+                 */
+                limit?: components["parameters"]["Limit"];
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The register. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EntitlementList"];
+                };
+            };
+            400: components["responses"]["Validation"];
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            500: components["responses"]["Internal"];
+            503: components["responses"]["Unavailable"];
+        };
+    };
+    createEntitlement: {
+        parameters: {
+            query?: never;
+            header: {
+                /**
+                 * @description A key the client mints before the first attempt and reuses, unchanged,
+                 *     on every retry of the same request (ADR-0013). Opaque to the server: it
+                 *     is compared, never parsed. Scoped to the tenant and to this endpoint, so
+                 *     a key used for a commit can never match an adjust.
+                 * @example 5f0c2a1e-commit-INV-0001-1
+                 */
+                "Idempotency-Key": components["parameters"]["IdempotencyKey"];
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["EntitlementRequest"];
+            };
+        };
+        responses: {
+            200: components["responses"]["EntitlementResult"];
+            201: components["responses"]["EntitlementResult"];
+            400: components["responses"]["Validation"];
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            409: components["responses"]["Conflict"];
+            500: components["responses"]["Internal"];
+            503: components["responses"]["Unavailable"];
+        };
+    };
+    getEntitlement: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /**
+                 * @description The entitlement grant identifier.
+                 * @example 01920e10-1a2b-7c3d-8e4f-5a6b7c8d9e01
+                 */
+                entitlementId: components["parameters"]["EntitlementId"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: components["responses"]["EntitlementResult"];
+            400: components["responses"]["Validation"];
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            500: components["responses"]["Internal"];
+            503: components["responses"]["Unavailable"];
+        };
+    };
+    actOnEntitlement: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /**
+                 * @description The entitlement grant identifier.
+                 * @example 01920e10-1a2b-7c3d-8e4f-5a6b7c8d9e01
+                 */
+                entitlementId: components["parameters"]["EntitlementId"];
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["EntitlementActionRequest"];
+            };
+        };
+        responses: {
+            200: components["responses"]["EntitlementResult"];
+            400: components["responses"]["Validation"];
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            409: components["responses"]["Conflict"];
+            500: components["responses"]["Internal"];
+            503: components["responses"]["Unavailable"];
+        };
+    };
+    listSubscriptionPlans: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The plans. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SubscriptionPlanList"];
+                };
+            };
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            500: components["responses"]["Internal"];
+            503: components["responses"]["Unavailable"];
+        };
+    };
+    proposeSubscriptionPlan: {
+        parameters: {
+            query?: never;
+            header: {
+                /**
+                 * @description A key the client mints before the first attempt and reuses, unchanged,
+                 *     on every retry of the same request (ADR-0013). Opaque to the server: it
+                 *     is compared, never parsed. Scoped to the tenant and to this endpoint, so
+                 *     a key used for a commit can never match an adjust.
+                 * @example 5f0c2a1e-commit-INV-0001-1
+                 */
+                "Idempotency-Key": components["parameters"]["IdempotencyKey"];
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["SubscriptionPlanRequest"];
+            };
+        };
+        responses: {
+            200: components["responses"]["SubscriptionPlanResult"];
+            201: components["responses"]["SubscriptionPlanResult"];
+            400: components["responses"]["Validation"];
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            409: components["responses"]["Conflict"];
+            500: components["responses"]["Internal"];
+            503: components["responses"]["Unavailable"];
+        };
+    };
+    getSubscriptionPlan: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /**
+                 * @description The subscription plan revision identifier.
+                 * @example 01920e20-1a2b-7c3d-8e4f-5a6b7c8d9e01
+                 */
+                planId: components["parameters"]["SubscriptionPlanId"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: components["responses"]["SubscriptionPlanResult"];
+            400: components["responses"]["Validation"];
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            500: components["responses"]["Internal"];
+            503: components["responses"]["Unavailable"];
+        };
+    };
+    actOnSubscriptionPlan: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /**
+                 * @description The subscription plan revision identifier.
+                 * @example 01920e20-1a2b-7c3d-8e4f-5a6b7c8d9e01
+                 */
+                planId: components["parameters"]["SubscriptionPlanId"];
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["SubscriptionPlanActionRequest"];
+            };
+        };
+        responses: {
+            200: components["responses"]["SubscriptionPlanResult"];
+            400: components["responses"]["Validation"];
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            409: components["responses"]["Conflict"];
+            500: components["responses"]["Internal"];
+            503: components["responses"]["Unavailable"];
+        };
+    };
+    getUsage: {
+        parameters: {
+            query?: {
+                /**
+                 * @description The month, YYYY-MM. Defaults to the current UTC month; a month not yet started is refused.
+                 * @example 2026-11
+                 */
+                period?: components["schemas"]["LegalPeriod"];
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The usage report. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["UsageReport"];
+                };
+            };
+            400: components["responses"]["Validation"];
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            500: components["responses"]["Internal"];
+            503: components["responses"]["Unavailable"];
+        };
+    };
+    getUsageBasis: {
+        parameters: {
+            query: {
+                /**
+                 * @description The month, YYYY-MM. Defaults to the current UTC month.
+                 * @example 2026-11
+                 */
+                period?: components["schemas"]["LegalPeriod"];
+                /**
+                 * @description The meter.
+                 * @example COMMITTED_DECISIONS
+                 */
+                meter: components["schemas"]["UsageMeter"];
+                /**
+                 * @description Maximum number of items to return. The server caps this independently,
+                 *     so a larger value is not an error and does not return more.
+                 * @example 50
+                 */
+                limit?: components["parameters"]["Limit"];
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The basis. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["UsageBasis"];
+                };
+            };
+            400: components["responses"]["Validation"];
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            500: components["responses"]["Internal"];
+            503: components["responses"]["Unavailable"];
+        };
+    };
+    listCTCApplicability: {
+        parameters: {
+            query?: {
+                /**
+                 * @description Only records of this legal entity.
+                 * @example 01920a4c-0000-7000-8000-00000000e001
+                 */
+                legalEntityId?: components["schemas"]["LegalEntityId"];
+                /**
+                 * @description Only records for this country.
+                 * @example IT
+                 */
+                country?: components["schemas"]["CTCCountry"];
+                /**
+                 * @description Only records in this status.
+                 * @example ACTIVE
+                 */
+                status?: components["schemas"]["CTCApplicabilityStatus"];
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The records. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CTCApplicabilityList"];
+                };
+            };
+            400: components["responses"]["Validation"];
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            500: components["responses"]["Internal"];
+            503: components["responses"]["Unavailable"];
+        };
+    };
+    createCTCApplicability: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CTCApplicabilityRequest"];
+            };
+        };
+        responses: {
+            /** @description The record, in DRAFT. */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CTCApplicability"];
+                };
+            };
+            400: components["responses"]["Validation"];
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            409: components["responses"]["Conflict"];
+            500: components["responses"]["Internal"];
+            503: components["responses"]["Unavailable"];
+        };
+    };
+    getCTCApplicability: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /**
+                 * @description The country applicability record identifier.
+                 * @example 01920e10-1a2b-7c3d-8e4f-5a6b7c8d9e01
+                 */
+                applicabilityId: components["parameters"]["CTCApplicabilityId"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The record. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CTCApplicability"];
+                };
+            };
+            400: components["responses"]["Validation"];
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            500: components["responses"]["Internal"];
+            503: components["responses"]["Unavailable"];
+        };
+    };
+    reviseCTCApplicability: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /**
+                 * @description The country applicability record identifier.
+                 * @example 01920e10-1a2b-7c3d-8e4f-5a6b7c8d9e01
+                 */
+                applicabilityId: components["parameters"]["CTCApplicabilityId"];
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CTCTerms"];
+            };
+        };
+        responses: {
+            /** @description The terms were already the current version's; nothing was recorded. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CTCApplicability"];
+                };
+            };
+            /** @description The record, with its new version. */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CTCApplicability"];
+                };
+            };
+            400: components["responses"]["Validation"];
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            409: components["responses"]["Conflict"];
+            500: components["responses"]["Internal"];
+            503: components["responses"]["Unavailable"];
+        };
+    };
+    addCTCApplicabilityEvidence: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /**
+                 * @description The country applicability record identifier.
+                 * @example 01920e10-1a2b-7c3d-8e4f-5a6b7c8d9e01
+                 */
+                applicabilityId: components["parameters"]["CTCApplicabilityId"];
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["EvidenceDocument"];
+            };
+        };
+        responses: {
+            /** @description The document was already attached. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CTCApplicability"];
+                };
+            };
+            /** @description The record, with the document attached. */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CTCApplicability"];
+                };
+            };
+            400: components["responses"]["Validation"];
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            409: components["responses"]["Conflict"];
+            500: components["responses"]["Internal"];
+            503: components["responses"]["Unavailable"];
+        };
+    };
+    signCTCApplicabilityGate: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /**
+                 * @description The country applicability record identifier.
+                 * @example 01920e10-1a2b-7c3d-8e4f-5a6b7c8d9e01
+                 */
+                applicabilityId: components["parameters"]["CTCApplicabilityId"];
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CTCGateRequest"];
+            };
+        };
+        responses: {
+            /** @description The gate was already signed on this version. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CTCApplicability"];
+                };
+            };
+            /** @description The record, with the sign-off. */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CTCApplicability"];
+                };
+            };
+            400: components["responses"]["Validation"];
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            409: components["responses"]["Conflict"];
+            500: components["responses"]["Internal"];
+            503: components["responses"]["Unavailable"];
+        };
+    };
+    transitionCTCApplicability: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /**
+                 * @description The country applicability record identifier.
+                 * @example 01920e10-1a2b-7c3d-8e4f-5a6b7c8d9e01
+                 */
+                applicabilityId: components["parameters"]["CTCApplicabilityId"];
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CTCTransitionRequest"];
+            };
+        };
+        responses: {
+            /** @description The record, moved. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CTCApplicability"];
+                };
+            };
+            400: components["responses"]["Validation"];
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            409: components["responses"]["Conflict"];
+            500: components["responses"]["Internal"];
+            503: components["responses"]["Unavailable"];
+        };
+    };
+    resolveCTCApplicability: {
+        parameters: {
+            query: {
+                /**
+                 * @description The legal entity.
+                 * @example 01920a4c-0000-7000-8000-00000000e001
+                 */
+                legalEntityId?: components["schemas"]["LegalEntityId"];
+                /**
+                 * @description The country.
+                 * @example IT
+                 */
+                country: components["schemas"]["CTCCountry"];
+                /**
+                 * @description The document type.
+                 * @example INVOICE
+                 */
+                documentType: components["schemas"]["CTCDocumentType"];
+                /**
+                 * @description The kind of buyer.
+                 * @example B2B
+                 */
+                buyerKind: components["schemas"]["CTCBuyerKind"];
+                /**
+                 * @description The document's issue date.
+                 * @example 2026-11-05
+                 */
+                date: components["schemas"]["CivilDate"];
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The resolution. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CTCResolution"];
+                };
+            };
+            400: components["responses"]["Validation"];
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            500: components["responses"]["Internal"];
+            503: components["responses"]["Unavailable"];
+        };
+    };
+    listCTCValidations: {
+        parameters: {
+            query?: {
+                /**
+                 * @description Only reports of this fiscal document.
+                 * @example 01920a90-1a2b-7c3d-8e4f-5a6b7c8d9e0f
+                 */
+                documentId?: components["schemas"]["DocumentId"];
+                /**
+                 * @description Only reports under this record.
+                 * @example 01920e10-1a2b-7c3d-8e4f-5a6b7c8d9e01
+                 */
+                applicabilityId?: components["schemas"]["CTCApplicabilityId"];
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The reports. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CTCValidationList"];
+                };
+            };
+            400: components["responses"]["Validation"];
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            500: components["responses"]["Internal"];
+            503: components["responses"]["Unavailable"];
+        };
+    };
+    validateCTCDocument: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CTCValidationRequest"];
+            };
+        };
+        responses: {
+            /** @description The same report, already recorded. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CTCValidation"];
+                };
+            };
+            /** @description The report. */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CTCValidation"];
+                };
+            };
+            400: components["responses"]["Validation"];
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            409: components["responses"]["Conflict"];
+            500: components["responses"]["Internal"];
+            503: components["responses"]["Unavailable"];
+        };
+    };
+    getCTCValidation: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /**
+                 * @description The validation report identifier.
+                 * @example 01920e20-1a2b-7c3d-8e4f-5a6b7c8d9e01
+                 */
+                validationId: components["parameters"]["CTCValidationId"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The report. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CTCValidation"];
+                };
+            };
+            400: components["responses"]["Validation"];
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            500: components["responses"]["Internal"];
+            503: components["responses"]["Unavailable"];
+        };
+    };
+    listCTCSubmissions: {
+        parameters: {
+            query?: {
+                /**
+                 * @description Only submissions of this fiscal document.
+                 * @example 01920a90-1a2b-7c3d-8e4f-5a6b7c8d9e0f
+                 */
+                documentId?: components["schemas"]["DocumentId"];
+                /**
+                 * @description Only submissions under this record.
+                 * @example 01920e10-1a2b-7c3d-8e4f-5a6b7c8d9e01
+                 */
+                applicabilityId?: components["schemas"]["CTCApplicabilityId"];
+                /**
+                 * @description Only submissions in this status.
+                 * @example AUTHORITY_REJECTED
+                 */
+                status?: components["schemas"]["CTCSubmissionStatus"];
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The submissions. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CTCSubmissionList"];
+                };
+            };
+            400: components["responses"]["Validation"];
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            500: components["responses"]["Internal"];
+            503: components["responses"]["Unavailable"];
+        };
+    };
+    prepareCTCSubmission: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CTCSubmissionRequest"];
+            };
+        };
+        responses: {
+            /** @description The live submission of this document under this record. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CTCSubmission"];
+                };
+            };
+            /** @description The submission, prepared and sealed. */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CTCSubmission"];
+                };
+            };
+            400: components["responses"]["Validation"];
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            409: components["responses"]["Conflict"];
+            500: components["responses"]["Internal"];
+            503: components["responses"]["Unavailable"];
+        };
+    };
+    getCTCSubmission: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /**
+                 * @description The submission identifier.
+                 * @example 01920e30-1a2b-7c3d-8e4f-5a6b7c8d9e01
+                 */
+                submissionId: components["parameters"]["CTCSubmissionId"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The submission. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CTCSubmission"];
+                };
+            };
+            400: components["responses"]["Validation"];
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            500: components["responses"]["Internal"];
+            503: components["responses"]["Unavailable"];
+        };
+    };
+    dispatchCTCSubmission: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /**
+                 * @description The submission identifier.
+                 * @example 01920e30-1a2b-7c3d-8e4f-5a6b7c8d9e01
+                 */
+                submissionId: components["parameters"]["CTCSubmissionId"];
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CTCDispatchRequest"];
+            };
+        };
+        responses: {
+            /** @description Already sent or answered; nothing was recorded. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CTCSubmission"];
+                };
+            };
+            /** @description The submission, with the attempt. */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CTCSubmission"];
+                };
+            };
+            400: components["responses"]["Validation"];
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            409: components["responses"]["Conflict"];
+            500: components["responses"]["Internal"];
+            503: components["responses"]["Unavailable"];
+        };
+    };
+    recordCTCResponse: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /**
+                 * @description The submission identifier.
+                 * @example 01920e30-1a2b-7c3d-8e4f-5a6b7c8d9e01
+                 */
+                submissionId: components["parameters"]["CTCSubmissionId"];
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CTCResponseRequest"];
+            };
+        };
+        responses: {
+            /** @description The same answer was already recorded. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CTCSubmission"];
+                };
+            };
+            /** @description The answer, recorded. */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CTCSubmission"];
+                };
+            };
+            400: components["responses"]["Validation"];
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            409: components["responses"]["Conflict"];
+            500: components["responses"]["Internal"];
+            503: components["responses"]["Unavailable"];
+        };
+    };
+    withdrawCTCSubmission: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /**
+                 * @description The submission identifier.
+                 * @example 01920e30-1a2b-7c3d-8e4f-5a6b7c8d9e01
+                 */
+                submissionId: components["parameters"]["CTCSubmissionId"];
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CTCWithdrawalRequest"];
+            };
+        };
+        responses: {
+            /** @description The submission, withdrawn. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CTCSubmission"];
+                };
+            };
+            400: components["responses"]["Validation"];
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            409: components["responses"]["Conflict"];
+            500: components["responses"]["Internal"];
+            503: components["responses"]["Unavailable"];
+        };
+    };
+    listRegulatoryChanges: {
+        parameters: {
+            query?: {
+                /**
+                 * @description Only changes in this status.
+                 * @example TRIAGED
+                 */
+                status?: components["schemas"]["RegulatoryChangeStatus"];
+                /**
+                 * @description Only changes of this kind.
+                 * @example RATE_CHANGE
+                 */
+                kind?: components["schemas"]["RegulatoryChangeKind"];
+                /**
+                 * @description Only changes in this jurisdiction; a country matches its subdivisions.
+                 * @example US
+                 */
+                jurisdiction?: components["schemas"]["EvidenceJurisdiction"];
+                /**
+                 * @description Only changes triaged at this priority.
+                 * @example URGENT
+                 */
+                priority?: components["schemas"]["RegulatoryChangePriority"];
+                /**
+                 * @description Maximum number of items to return. The server caps this independently,
+                 *     so a larger value is not an error and does not return more.
+                 * @example 50
+                 */
+                limit?: components["parameters"]["Limit"];
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The changes. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["RegulatoryChangeList"];
+                };
+            };
+            400: components["responses"]["Validation"];
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            500: components["responses"]["Internal"];
+            503: components["responses"]["Unavailable"];
+        };
+    };
+    recordRegulatoryChange: {
+        parameters: {
+            query?: never;
+            header: {
+                /**
+                 * @description A key the client mints before the first attempt and reuses, unchanged,
+                 *     on every retry of the same request (ADR-0013). Opaque to the server: it
+                 *     is compared, never parsed. Scoped to the tenant and to this endpoint, so
+                 *     a key used for a commit can never match an adjust.
+                 * @example 5f0c2a1e-commit-INV-0001-1
+                 */
+                "Idempotency-Key": components["parameters"]["IdempotencyKey"];
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["RegulatoryChangeRequest"];
+            };
+        };
+        responses: {
+            200: components["responses"]["RegulatoryChangeResult"];
+            201: components["responses"]["RegulatoryChangeResult"];
+            400: components["responses"]["Validation"];
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            409: components["responses"]["Conflict"];
+            500: components["responses"]["Internal"];
+            503: components["responses"]["Unavailable"];
+        };
+    };
+    getRegulatoryChange: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /**
+                 * @description The regulatory change identifier.
+                 * @example 01920e10-1a2b-7c3d-8e4f-5a6b7c8d9e01
+                 */
+                changeId: components["parameters"]["RegulatoryChangeId"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: components["responses"]["RegulatoryChangeResult"];
+            400: components["responses"]["Validation"];
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            500: components["responses"]["Internal"];
+            503: components["responses"]["Unavailable"];
+        };
+    };
+    transitionRegulatoryChange: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /**
+                 * @description The regulatory change identifier.
+                 * @example 01920e10-1a2b-7c3d-8e4f-5a6b7c8d9e01
+                 */
+                changeId: components["parameters"]["RegulatoryChangeId"];
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["RegulatoryChangeTransitionRequest"];
+            };
+        };
+        responses: {
+            200: components["responses"]["RegulatoryChangeResult"];
+            400: components["responses"]["Validation"];
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            409: components["responses"]["Conflict"];
+            500: components["responses"]["Internal"];
+            503: components["responses"]["Unavailable"];
+        };
+    };
+    assessRegulatoryChange: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /**
+                 * @description The regulatory change identifier.
+                 * @example 01920e10-1a2b-7c3d-8e4f-5a6b7c8d9e01
+                 */
+                changeId: components["parameters"]["RegulatoryChangeId"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: components["responses"]["ImpactAssessmentResult"];
+            201: components["responses"]["ImpactAssessmentResult"];
+            400: components["responses"]["Validation"];
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            409: components["responses"]["Conflict"];
+            500: components["responses"]["Internal"];
+            503: components["responses"]["Unavailable"];
+        };
+    };
+    listImpactAssessments: {
+        parameters: {
+            query?: {
+                /**
+                 * @description Only the assessments of this change.
+                 * @example 01920e10-1a2b-7c3d-8e4f-5a6b7c8d9e01
+                 */
+                changeId?: components["schemas"]["RegulatoryChangeId"];
+                /**
+                 * @description Only assessments of at least this severity.
+                 * @example HIGH
+                 */
+                minSeverity?: components["schemas"]["ImpactSeverity"];
+                /**
+                 * @description Maximum number of items to return. The server caps this independently,
+                 *     so a larger value is not an error and does not return more.
+                 * @example 50
+                 */
+                limit?: components["parameters"]["Limit"];
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The assessments. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ImpactAssessmentList"];
+                };
+            };
+            400: components["responses"]["Validation"];
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            500: components["responses"]["Internal"];
+            503: components["responses"]["Unavailable"];
+        };
+    };
+    getImpactAssessment: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /**
+                 * @description The impact assessment identifier.
+                 * @example 01920e20-1a2b-7c3d-8e4f-5a6b7c8d9e01
+                 */
+                assessmentId: components["parameters"]["ImpactAssessmentId"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: components["responses"]["ImpactAssessmentResult"];
+            400: components["responses"]["Validation"];
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            500: components["responses"]["Internal"];
+            503: components["responses"]["Unavailable"];
+        };
+    };
+    listReviewRecommendations: {
+        parameters: {
+            query?: {
+                /**
+                 * @description Only recommendations in this status.
+                 * @example RECOMMENDED
+                 */
+                status?: components["schemas"]["ReviewRecommendationStatus"];
+                /**
+                 * @description Only the recommendations on this change.
+                 * @example 01920e10-1a2b-7c3d-8e4f-5a6b7c8d9e01
+                 */
+                changeId?: components["schemas"]["RegulatoryChangeId"];
+                /**
+                 * @description Only HUMAN or only AI_ASSISTED recommendations.
+                 * @example AI_ASSISTED
+                 */
+                origin?: components["schemas"]["ReviewRecommendationOrigin"];
+                /**
+                 * @description Maximum number of items to return. The server caps this independently,
+                 *     so a larger value is not an error and does not return more.
+                 * @example 50
+                 */
+                limit?: components["parameters"]["Limit"];
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The recommendations. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ReviewRecommendationList"];
+                };
+            };
+            400: components["responses"]["Validation"];
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            500: components["responses"]["Internal"];
+            503: components["responses"]["Unavailable"];
+        };
+    };
+    draftReviewRecommendation: {
+        parameters: {
+            query?: never;
+            header: {
+                /**
+                 * @description A key the client mints before the first attempt and reuses, unchanged,
+                 *     on every retry of the same request (ADR-0013). Opaque to the server: it
+                 *     is compared, never parsed. Scoped to the tenant and to this endpoint, so
+                 *     a key used for a commit can never match an adjust.
+                 * @example 5f0c2a1e-commit-INV-0001-1
+                 */
+                "Idempotency-Key": components["parameters"]["IdempotencyKey"];
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ReviewRecommendationRequest"];
+            };
+        };
+        responses: {
+            200: components["responses"]["ReviewRecommendationResult"];
+            201: components["responses"]["ReviewRecommendationResult"];
+            400: components["responses"]["Validation"];
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            409: components["responses"]["Conflict"];
+            500: components["responses"]["Internal"];
+            503: components["responses"]["Unavailable"];
+        };
+    };
+    getReviewRecommendation: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /**
+                 * @description The review recommendation identifier.
+                 * @example 01920e30-1a2b-7c3d-8e4f-5a6b7c8d9e01
+                 */
+                recommendationId: components["parameters"]["ReviewRecommendationId"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: components["responses"]["ReviewRecommendationResult"];
+            400: components["responses"]["Validation"];
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            500: components["responses"]["Internal"];
+            503: components["responses"]["Unavailable"];
+        };
+    };
+    reviseReviewRecommendation: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /**
+                 * @description The review recommendation identifier.
+                 * @example 01920e30-1a2b-7c3d-8e4f-5a6b7c8d9e01
+                 */
+                recommendationId: components["parameters"]["ReviewRecommendationId"];
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ReviewRecommendationRevisionRequest"];
+            };
+        };
+        responses: {
+            200: components["responses"]["ReviewRecommendationResult"];
+            400: components["responses"]["Validation"];
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            409: components["responses"]["Conflict"];
+            500: components["responses"]["Internal"];
+            503: components["responses"]["Unavailable"];
+        };
+    };
+    recommendReviewRecommendation: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /**
+                 * @description The review recommendation identifier.
+                 * @example 01920e30-1a2b-7c3d-8e4f-5a6b7c8d9e01
+                 */
+                recommendationId: components["parameters"]["ReviewRecommendationId"];
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ReviewRecommendationActRequest"];
+            };
+        };
+        responses: {
+            200: components["responses"]["ReviewRecommendationResult"];
+            400: components["responses"]["Validation"];
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            409: components["responses"]["Conflict"];
+            500: components["responses"]["Internal"];
+            503: components["responses"]["Unavailable"];
+        };
+    };
+    reviewReviewRecommendation: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /**
+                 * @description The review recommendation identifier.
+                 * @example 01920e30-1a2b-7c3d-8e4f-5a6b7c8d9e01
+                 */
+                recommendationId: components["parameters"]["ReviewRecommendationId"];
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ReviewRecommendationReviewRequest"];
+            };
+        };
+        responses: {
+            200: components["responses"]["ReviewRecommendationResult"];
+            400: components["responses"]["Validation"];
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            409: components["responses"]["Conflict"];
+            500: components["responses"]["Internal"];
+            503: components["responses"]["Unavailable"];
+        };
+    };
+    withdrawReviewRecommendation: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /**
+                 * @description The review recommendation identifier.
+                 * @example 01920e30-1a2b-7c3d-8e4f-5a6b7c8d9e01
+                 */
+                recommendationId: components["parameters"]["ReviewRecommendationId"];
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ReviewRecommendationActRequest"];
+            };
+        };
+        responses: {
+            200: components["responses"]["ReviewRecommendationResult"];
             400: components["responses"]["Validation"];
             401: components["responses"]["Unauthenticated"];
             403: components["responses"]["Forbidden"];

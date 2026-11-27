@@ -20,7 +20,7 @@
 # The one rule below answers named inputs: the US state sales tax on an
 # equipment sale, at the rates taxation.json declares.
 
-bundle "global-telecom-2026.10"
+bundle "global-telecom-2026.11"
 ir 1
 
 policy line2 = HALF_UP scale 2 basis LINE

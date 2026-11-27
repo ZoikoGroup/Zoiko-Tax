@@ -51,6 +51,10 @@ export type View =
   | 'notices'
   | 'workpapers'
   | 'erp-reconciliation'
+  | 'entitlements'
+  | 'subscriptions'
+  | 'einvoicing'
+  | 'regulatory-intelligence'
 
 /** A screen: a view, and the tab inside it when the view has tabs. */
 export interface NavTarget {
@@ -116,6 +120,7 @@ export const NAV_DOMAINS: readonly NavDomain[] = [
       { id: 'determine.situs', label: 'Situs & Place of Supply', target: at('locations', 'try') },
       { id: 'determine.liability', label: 'Liability & Recovery', target: at('determine', 'liability') },
       { id: 'determine.corrections', label: 'Corrections', target: at('determine', 'refunds') },
+      { id: 'determine.batches', label: 'Batch Jobs', target: at('determine', 'batch') },
     ],
   },
   {
@@ -156,10 +161,10 @@ export const NAV_DOMAINS: readonly NavDomain[] = [
   },
   {
     id: 'e-invoicing', label: 'E-Invoicing / CTC', icon: <IconFileCheck />, children: [
-      { id: 'ctc.applicability', label: 'Country Applicability' },
+      { id: 'ctc.applicability', label: 'Country Applicability', target: at('einvoicing', 'applicability') },
       { id: 'ctc.processing', label: 'Invoice Processing', target: at('documents', 'issue') },
-      { id: 'ctc.validation', label: 'Format Validation' },
-      { id: 'ctc.submissions', label: 'Authority Submissions' },
+      { id: 'ctc.validation', label: 'Format Validation', target: at('einvoicing', 'validation') },
+      { id: 'ctc.submissions', label: 'Authority Submissions', target: at('einvoicing', 'submissions') },
       { id: 'ctc.rejections', label: 'Rejections & Corrections', target: at('documents', 'corrections') },
       { id: 'ctc.archive', label: 'Fiscal Archive', target: at('documents', 'lookup') },
     ],
@@ -180,15 +185,17 @@ export const NAV_DOMAINS: readonly NavDomain[] = [
       { id: 'evidence.provenance', label: 'Source Provenance', target: at('evidence', 'provenance') },
       { id: 'evidence.replay', label: 'Historical Replay', target: at('evidence', 'replay') },
       { id: 'evidence.exports', label: 'Verified Exports', target: at('evidence', 'exports') },
+      { id: 'evidence.holds', label: 'Legal Holds', target: at('evidence', 'holds') },
+      { id: 'evidence.retention', label: 'Retention Policies', target: at('evidence', 'retention') },
     ],
   },
   {
     id: 'intelligence', label: 'Intelligence', icon: <IconSparkles />, children: [
-      { id: 'intelligence.feed', label: 'Regulatory Change Feed' },
-      { id: 'intelligence.impact', label: 'Tax Impact Analysis' },
+      { id: 'intelligence.feed', label: 'Regulatory Change Feed', target: at('regulatory-intelligence', 'feed') },
+      { id: 'intelligence.impact', label: 'Tax Impact Analysis', target: at('regulatory-intelligence', 'impact') },
       { id: 'intelligence.coverage', label: 'Coverage Intelligence', target: at('locations', 'gaps') },
       { id: 'intelligence.assistant', label: 'AI Assistant', target: at('intelligence') },
-      { id: 'intelligence.recommendations', label: 'Review Recommendations' },
+      { id: 'intelligence.recommendations', label: 'Review Recommendations', target: at('regulatory-intelligence', 'recommendations') },
     ],
   },
   {
@@ -196,8 +203,8 @@ export const NAV_DOMAINS: readonly NavDomain[] = [
       { id: 'content.packs', label: 'Jurisdiction Rule Packs', target: at('content', 'packs') },
       { id: 'content.codes', label: 'Service & Levy Codes', target: at('content', 'codes') },
       { id: 'content.sources', label: 'Legal Source Library', target: at('content', 'sources') },
-      { id: 'content.crosswalks', label: 'Vendor Crosswalks' },
-      { id: 'content.approvals', label: 'Rule Approvals' },
+      { id: 'content.crosswalks', label: 'Vendor Crosswalks', target: at('content', 'crosswalks') },
+      { id: 'content.approvals', label: 'Rule Approvals', target: at('content', 'approvals') },
       { id: 'content.releases', label: 'Content Releases', target: at('content', 'releases') },
     ],
   },
@@ -224,9 +231,9 @@ export const NAV_DOMAINS: readonly NavDomain[] = [
     id: 'administration', label: 'Administration', icon: <IconSettings />, children: [
       { id: 'admin.organisation', label: 'Organisation & Legal Entities', target: at('admin', 'organisation') },
       { id: 'admin.users', label: 'Users & Permissions', target: at('admin', 'users') },
-      { id: 'admin.entitlements', label: 'Entitlements' },
+      { id: 'admin.entitlements', label: 'Entitlements', target: at('entitlements') },
       { id: 'admin.integrations', label: 'Integrations & APIs', target: at('admin', 'integrations') },
-      { id: 'admin.subscriptions', label: 'Subscriptions & Usage' },
+      { id: 'admin.subscriptions', label: 'Subscriptions & Usage', target: at('subscriptions') },
       { id: 'admin.security', label: 'Security Settings', target: at('admin', 'security') },
     ],
   },

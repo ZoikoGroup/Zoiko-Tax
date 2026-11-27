@@ -1,6 +1,6 @@
 {
-  "version": "2026.10.3",
-  "graphVersion": "global-2026.10.3",
+  "version": "2026.11.1",
+  "graphVersion": "global-2026.11.1",
   "jurisdictions": [
     {
       "id": "jurisdiction:at",
@@ -739,6 +739,906 @@
       "name": "North Carolina",
       "country": "US",
       "code": "US-NC",
+      "timezone": "America/New_York",
+      "effectiveFrom": "2000-01-01"
+    },
+    {
+      "id": "jurisdiction:us-nc-alamance-county",
+      "parent": "jurisdiction:us-nc",
+      "level": "COUNTY",
+      "name": "Alamance County",
+      "country": "US",
+      "timezone": "America/New_York",
+      "effectiveFrom": "2000-01-01"
+    },
+    {
+      "id": "jurisdiction:us-nc-alexander-county",
+      "parent": "jurisdiction:us-nc",
+      "level": "COUNTY",
+      "name": "Alexander County",
+      "country": "US",
+      "timezone": "America/New_York",
+      "effectiveFrom": "2000-01-01"
+    },
+    {
+      "id": "jurisdiction:us-nc-alleghany-county",
+      "parent": "jurisdiction:us-nc",
+      "level": "COUNTY",
+      "name": "Alleghany County",
+      "country": "US",
+      "timezone": "America/New_York",
+      "effectiveFrom": "2000-01-01"
+    },
+    {
+      "id": "jurisdiction:us-nc-anson-county",
+      "parent": "jurisdiction:us-nc",
+      "level": "COUNTY",
+      "name": "Anson County",
+      "country": "US",
+      "timezone": "America/New_York",
+      "effectiveFrom": "2000-01-01"
+    },
+    {
+      "id": "jurisdiction:us-nc-ashe-county",
+      "parent": "jurisdiction:us-nc",
+      "level": "COUNTY",
+      "name": "Ashe County",
+      "country": "US",
+      "timezone": "America/New_York",
+      "effectiveFrom": "2000-01-01"
+    },
+    {
+      "id": "jurisdiction:us-nc-avery-county",
+      "parent": "jurisdiction:us-nc",
+      "level": "COUNTY",
+      "name": "Avery County",
+      "country": "US",
+      "timezone": "America/New_York",
+      "effectiveFrom": "2000-01-01"
+    },
+    {
+      "id": "jurisdiction:us-nc-beaufort-county",
+      "parent": "jurisdiction:us-nc",
+      "level": "COUNTY",
+      "name": "Beaufort County",
+      "country": "US",
+      "timezone": "America/New_York",
+      "effectiveFrom": "2000-01-01"
+    },
+    {
+      "id": "jurisdiction:us-nc-bertie-county",
+      "parent": "jurisdiction:us-nc",
+      "level": "COUNTY",
+      "name": "Bertie County",
+      "country": "US",
+      "timezone": "America/New_York",
+      "effectiveFrom": "2000-01-01"
+    },
+    {
+      "id": "jurisdiction:us-nc-bladen-county",
+      "parent": "jurisdiction:us-nc",
+      "level": "COUNTY",
+      "name": "Bladen County",
+      "country": "US",
+      "timezone": "America/New_York",
+      "effectiveFrom": "2000-01-01"
+    },
+    {
+      "id": "jurisdiction:us-nc-brunswick-county",
+      "parent": "jurisdiction:us-nc",
+      "level": "COUNTY",
+      "name": "Brunswick County",
+      "country": "US",
+      "timezone": "America/New_York",
+      "effectiveFrom": "2000-01-01"
+    },
+    {
+      "id": "jurisdiction:us-nc-buncombe-county",
+      "parent": "jurisdiction:us-nc",
+      "level": "COUNTY",
+      "name": "Buncombe County",
+      "country": "US",
+      "timezone": "America/New_York",
+      "effectiveFrom": "2000-01-01"
+    },
+    {
+      "id": "jurisdiction:us-nc-burke-county",
+      "parent": "jurisdiction:us-nc",
+      "level": "COUNTY",
+      "name": "Burke County",
+      "country": "US",
+      "timezone": "America/New_York",
+      "effectiveFrom": "2000-01-01"
+    },
+    {
+      "id": "jurisdiction:us-nc-cabarrus-county",
+      "parent": "jurisdiction:us-nc",
+      "level": "COUNTY",
+      "name": "Cabarrus County",
+      "country": "US",
+      "timezone": "America/New_York",
+      "effectiveFrom": "2000-01-01"
+    },
+    {
+      "id": "jurisdiction:us-nc-caldwell-county",
+      "parent": "jurisdiction:us-nc",
+      "level": "COUNTY",
+      "name": "Caldwell County",
+      "country": "US",
+      "timezone": "America/New_York",
+      "effectiveFrom": "2000-01-01"
+    },
+    {
+      "id": "jurisdiction:us-nc-camden-county",
+      "parent": "jurisdiction:us-nc",
+      "level": "COUNTY",
+      "name": "Camden County",
+      "country": "US",
+      "timezone": "America/New_York",
+      "effectiveFrom": "2000-01-01"
+    },
+    {
+      "id": "jurisdiction:us-nc-carteret-county",
+      "parent": "jurisdiction:us-nc",
+      "level": "COUNTY",
+      "name": "Carteret County",
+      "country": "US",
+      "timezone": "America/New_York",
+      "effectiveFrom": "2000-01-01"
+    },
+    {
+      "id": "jurisdiction:us-nc-caswell-county",
+      "parent": "jurisdiction:us-nc",
+      "level": "COUNTY",
+      "name": "Caswell County",
+      "country": "US",
+      "timezone": "America/New_York",
+      "effectiveFrom": "2000-01-01"
+    },
+    {
+      "id": "jurisdiction:us-nc-catawba-county",
+      "parent": "jurisdiction:us-nc",
+      "level": "COUNTY",
+      "name": "Catawba County",
+      "country": "US",
+      "timezone": "America/New_York",
+      "effectiveFrom": "2000-01-01"
+    },
+    {
+      "id": "jurisdiction:us-nc-chatham-county",
+      "parent": "jurisdiction:us-nc",
+      "level": "COUNTY",
+      "name": "Chatham County",
+      "country": "US",
+      "timezone": "America/New_York",
+      "effectiveFrom": "2000-01-01"
+    },
+    {
+      "id": "jurisdiction:us-nc-cherokee-county",
+      "parent": "jurisdiction:us-nc",
+      "level": "COUNTY",
+      "name": "Cherokee County",
+      "country": "US",
+      "timezone": "America/New_York",
+      "effectiveFrom": "2000-01-01"
+    },
+    {
+      "id": "jurisdiction:us-nc-chowan-county",
+      "parent": "jurisdiction:us-nc",
+      "level": "COUNTY",
+      "name": "Chowan County",
+      "country": "US",
+      "timezone": "America/New_York",
+      "effectiveFrom": "2000-01-01"
+    },
+    {
+      "id": "jurisdiction:us-nc-clay-county",
+      "parent": "jurisdiction:us-nc",
+      "level": "COUNTY",
+      "name": "Clay County",
+      "country": "US",
+      "timezone": "America/New_York",
+      "effectiveFrom": "2000-01-01"
+    },
+    {
+      "id": "jurisdiction:us-nc-cleveland-county",
+      "parent": "jurisdiction:us-nc",
+      "level": "COUNTY",
+      "name": "Cleveland County",
+      "country": "US",
+      "timezone": "America/New_York",
+      "effectiveFrom": "2000-01-01"
+    },
+    {
+      "id": "jurisdiction:us-nc-columbus-county",
+      "parent": "jurisdiction:us-nc",
+      "level": "COUNTY",
+      "name": "Columbus County",
+      "country": "US",
+      "timezone": "America/New_York",
+      "effectiveFrom": "2000-01-01"
+    },
+    {
+      "id": "jurisdiction:us-nc-craven-county",
+      "parent": "jurisdiction:us-nc",
+      "level": "COUNTY",
+      "name": "Craven County",
+      "country": "US",
+      "timezone": "America/New_York",
+      "effectiveFrom": "2000-01-01"
+    },
+    {
+      "id": "jurisdiction:us-nc-cumberland-county",
+      "parent": "jurisdiction:us-nc",
+      "level": "COUNTY",
+      "name": "Cumberland County",
+      "country": "US",
+      "timezone": "America/New_York",
+      "effectiveFrom": "2000-01-01"
+    },
+    {
+      "id": "jurisdiction:us-nc-currituck-county",
+      "parent": "jurisdiction:us-nc",
+      "level": "COUNTY",
+      "name": "Currituck County",
+      "country": "US",
+      "timezone": "America/New_York",
+      "effectiveFrom": "2000-01-01"
+    },
+    {
+      "id": "jurisdiction:us-nc-dare-county",
+      "parent": "jurisdiction:us-nc",
+      "level": "COUNTY",
+      "name": "Dare County",
+      "country": "US",
+      "timezone": "America/New_York",
+      "effectiveFrom": "2000-01-01"
+    },
+    {
+      "id": "jurisdiction:us-nc-davidson-county",
+      "parent": "jurisdiction:us-nc",
+      "level": "COUNTY",
+      "name": "Davidson County",
+      "country": "US",
+      "timezone": "America/New_York",
+      "effectiveFrom": "2000-01-01"
+    },
+    {
+      "id": "jurisdiction:us-nc-davie-county",
+      "parent": "jurisdiction:us-nc",
+      "level": "COUNTY",
+      "name": "Davie County",
+      "country": "US",
+      "timezone": "America/New_York",
+      "effectiveFrom": "2000-01-01"
+    },
+    {
+      "id": "jurisdiction:us-nc-duplin-county",
+      "parent": "jurisdiction:us-nc",
+      "level": "COUNTY",
+      "name": "Duplin County",
+      "country": "US",
+      "timezone": "America/New_York",
+      "effectiveFrom": "2000-01-01"
+    },
+    {
+      "id": "jurisdiction:us-nc-durham-county",
+      "parent": "jurisdiction:us-nc",
+      "level": "COUNTY",
+      "name": "Durham County",
+      "country": "US",
+      "timezone": "America/New_York",
+      "effectiveFrom": "2000-01-01"
+    },
+    {
+      "id": "jurisdiction:us-nc-edgecombe-county",
+      "parent": "jurisdiction:us-nc",
+      "level": "COUNTY",
+      "name": "Edgecombe County",
+      "country": "US",
+      "timezone": "America/New_York",
+      "effectiveFrom": "2000-01-01"
+    },
+    {
+      "id": "jurisdiction:us-nc-forsyth-county",
+      "parent": "jurisdiction:us-nc",
+      "level": "COUNTY",
+      "name": "Forsyth County",
+      "country": "US",
+      "timezone": "America/New_York",
+      "effectiveFrom": "2000-01-01"
+    },
+    {
+      "id": "jurisdiction:us-nc-franklin-county",
+      "parent": "jurisdiction:us-nc",
+      "level": "COUNTY",
+      "name": "Franklin County",
+      "country": "US",
+      "timezone": "America/New_York",
+      "effectiveFrom": "2000-01-01"
+    },
+    {
+      "id": "jurisdiction:us-nc-gaston-county",
+      "parent": "jurisdiction:us-nc",
+      "level": "COUNTY",
+      "name": "Gaston County",
+      "country": "US",
+      "timezone": "America/New_York",
+      "effectiveFrom": "2000-01-01"
+    },
+    {
+      "id": "jurisdiction:us-nc-gates-county",
+      "parent": "jurisdiction:us-nc",
+      "level": "COUNTY",
+      "name": "Gates County",
+      "country": "US",
+      "timezone": "America/New_York",
+      "effectiveFrom": "2000-01-01"
+    },
+    {
+      "id": "jurisdiction:us-nc-graham-county",
+      "parent": "jurisdiction:us-nc",
+      "level": "COUNTY",
+      "name": "Graham County",
+      "country": "US",
+      "timezone": "America/New_York",
+      "effectiveFrom": "2000-01-01"
+    },
+    {
+      "id": "jurisdiction:us-nc-granville-county",
+      "parent": "jurisdiction:us-nc",
+      "level": "COUNTY",
+      "name": "Granville County",
+      "country": "US",
+      "timezone": "America/New_York",
+      "effectiveFrom": "2000-01-01"
+    },
+    {
+      "id": "jurisdiction:us-nc-greene-county",
+      "parent": "jurisdiction:us-nc",
+      "level": "COUNTY",
+      "name": "Greene County",
+      "country": "US",
+      "timezone": "America/New_York",
+      "effectiveFrom": "2000-01-01"
+    },
+    {
+      "id": "jurisdiction:us-nc-guilford-county",
+      "parent": "jurisdiction:us-nc",
+      "level": "COUNTY",
+      "name": "Guilford County",
+      "country": "US",
+      "timezone": "America/New_York",
+      "effectiveFrom": "2000-01-01"
+    },
+    {
+      "id": "jurisdiction:us-nc-halifax-county",
+      "parent": "jurisdiction:us-nc",
+      "level": "COUNTY",
+      "name": "Halifax County",
+      "country": "US",
+      "timezone": "America/New_York",
+      "effectiveFrom": "2000-01-01"
+    },
+    {
+      "id": "jurisdiction:us-nc-harnett-county",
+      "parent": "jurisdiction:us-nc",
+      "level": "COUNTY",
+      "name": "Harnett County",
+      "country": "US",
+      "timezone": "America/New_York",
+      "effectiveFrom": "2000-01-01"
+    },
+    {
+      "id": "jurisdiction:us-nc-haywood-county",
+      "parent": "jurisdiction:us-nc",
+      "level": "COUNTY",
+      "name": "Haywood County",
+      "country": "US",
+      "timezone": "America/New_York",
+      "effectiveFrom": "2000-01-01"
+    },
+    {
+      "id": "jurisdiction:us-nc-henderson-county",
+      "parent": "jurisdiction:us-nc",
+      "level": "COUNTY",
+      "name": "Henderson County",
+      "country": "US",
+      "timezone": "America/New_York",
+      "effectiveFrom": "2000-01-01"
+    },
+    {
+      "id": "jurisdiction:us-nc-hertford-county",
+      "parent": "jurisdiction:us-nc",
+      "level": "COUNTY",
+      "name": "Hertford County",
+      "country": "US",
+      "timezone": "America/New_York",
+      "effectiveFrom": "2000-01-01"
+    },
+    {
+      "id": "jurisdiction:us-nc-hoke-county",
+      "parent": "jurisdiction:us-nc",
+      "level": "COUNTY",
+      "name": "Hoke County",
+      "country": "US",
+      "timezone": "America/New_York",
+      "effectiveFrom": "2000-01-01"
+    },
+    {
+      "id": "jurisdiction:us-nc-hyde-county",
+      "parent": "jurisdiction:us-nc",
+      "level": "COUNTY",
+      "name": "Hyde County",
+      "country": "US",
+      "timezone": "America/New_York",
+      "effectiveFrom": "2000-01-01"
+    },
+    {
+      "id": "jurisdiction:us-nc-iredell-county",
+      "parent": "jurisdiction:us-nc",
+      "level": "COUNTY",
+      "name": "Iredell County",
+      "country": "US",
+      "timezone": "America/New_York",
+      "effectiveFrom": "2000-01-01"
+    },
+    {
+      "id": "jurisdiction:us-nc-jackson-county",
+      "parent": "jurisdiction:us-nc",
+      "level": "COUNTY",
+      "name": "Jackson County",
+      "country": "US",
+      "timezone": "America/New_York",
+      "effectiveFrom": "2000-01-01"
+    },
+    {
+      "id": "jurisdiction:us-nc-johnston-county",
+      "parent": "jurisdiction:us-nc",
+      "level": "COUNTY",
+      "name": "Johnston County",
+      "country": "US",
+      "timezone": "America/New_York",
+      "effectiveFrom": "2000-01-01"
+    },
+    {
+      "id": "jurisdiction:us-nc-jones-county",
+      "parent": "jurisdiction:us-nc",
+      "level": "COUNTY",
+      "name": "Jones County",
+      "country": "US",
+      "timezone": "America/New_York",
+      "effectiveFrom": "2000-01-01"
+    },
+    {
+      "id": "jurisdiction:us-nc-lee-county",
+      "parent": "jurisdiction:us-nc",
+      "level": "COUNTY",
+      "name": "Lee County",
+      "country": "US",
+      "timezone": "America/New_York",
+      "effectiveFrom": "2000-01-01"
+    },
+    {
+      "id": "jurisdiction:us-nc-lenoir-county",
+      "parent": "jurisdiction:us-nc",
+      "level": "COUNTY",
+      "name": "Lenoir County",
+      "country": "US",
+      "timezone": "America/New_York",
+      "effectiveFrom": "2000-01-01"
+    },
+    {
+      "id": "jurisdiction:us-nc-lincoln-county",
+      "parent": "jurisdiction:us-nc",
+      "level": "COUNTY",
+      "name": "Lincoln County",
+      "country": "US",
+      "timezone": "America/New_York",
+      "effectiveFrom": "2000-01-01"
+    },
+    {
+      "id": "jurisdiction:us-nc-macon-county",
+      "parent": "jurisdiction:us-nc",
+      "level": "COUNTY",
+      "name": "Macon County",
+      "country": "US",
+      "timezone": "America/New_York",
+      "effectiveFrom": "2000-01-01"
+    },
+    {
+      "id": "jurisdiction:us-nc-madison-county",
+      "parent": "jurisdiction:us-nc",
+      "level": "COUNTY",
+      "name": "Madison County",
+      "country": "US",
+      "timezone": "America/New_York",
+      "effectiveFrom": "2000-01-01"
+    },
+    {
+      "id": "jurisdiction:us-nc-martin-county",
+      "parent": "jurisdiction:us-nc",
+      "level": "COUNTY",
+      "name": "Martin County",
+      "country": "US",
+      "timezone": "America/New_York",
+      "effectiveFrom": "2000-01-01"
+    },
+    {
+      "id": "jurisdiction:us-nc-mcdowell-county",
+      "parent": "jurisdiction:us-nc",
+      "level": "COUNTY",
+      "name": "McDowell County",
+      "country": "US",
+      "timezone": "America/New_York",
+      "effectiveFrom": "2000-01-01"
+    },
+    {
+      "id": "jurisdiction:us-nc-mecklenburg-county",
+      "parent": "jurisdiction:us-nc",
+      "level": "COUNTY",
+      "name": "Mecklenburg County",
+      "country": "US",
+      "timezone": "America/New_York",
+      "effectiveFrom": "2000-01-01"
+    },
+    {
+      "id": "jurisdiction:us-nc-mitchell-county",
+      "parent": "jurisdiction:us-nc",
+      "level": "COUNTY",
+      "name": "Mitchell County",
+      "country": "US",
+      "timezone": "America/New_York",
+      "effectiveFrom": "2000-01-01"
+    },
+    {
+      "id": "jurisdiction:us-nc-montgomery-county",
+      "parent": "jurisdiction:us-nc",
+      "level": "COUNTY",
+      "name": "Montgomery County",
+      "country": "US",
+      "timezone": "America/New_York",
+      "effectiveFrom": "2000-01-01"
+    },
+    {
+      "id": "jurisdiction:us-nc-moore-county",
+      "parent": "jurisdiction:us-nc",
+      "level": "COUNTY",
+      "name": "Moore County",
+      "country": "US",
+      "timezone": "America/New_York",
+      "effectiveFrom": "2000-01-01"
+    },
+    {
+      "id": "jurisdiction:us-nc-nash-county",
+      "parent": "jurisdiction:us-nc",
+      "level": "COUNTY",
+      "name": "Nash County",
+      "country": "US",
+      "timezone": "America/New_York",
+      "effectiveFrom": "2000-01-01"
+    },
+    {
+      "id": "jurisdiction:us-nc-new-hanover-county",
+      "parent": "jurisdiction:us-nc",
+      "level": "COUNTY",
+      "name": "New Hanover County",
+      "country": "US",
+      "timezone": "America/New_York",
+      "effectiveFrom": "2000-01-01"
+    },
+    {
+      "id": "jurisdiction:us-nc-northampton-county",
+      "parent": "jurisdiction:us-nc",
+      "level": "COUNTY",
+      "name": "Northampton County",
+      "country": "US",
+      "timezone": "America/New_York",
+      "effectiveFrom": "2000-01-01"
+    },
+    {
+      "id": "jurisdiction:us-nc-onslow-county",
+      "parent": "jurisdiction:us-nc",
+      "level": "COUNTY",
+      "name": "Onslow County",
+      "country": "US",
+      "timezone": "America/New_York",
+      "effectiveFrom": "2000-01-01"
+    },
+    {
+      "id": "jurisdiction:us-nc-orange-county",
+      "parent": "jurisdiction:us-nc",
+      "level": "COUNTY",
+      "name": "Orange County",
+      "country": "US",
+      "timezone": "America/New_York",
+      "effectiveFrom": "2000-01-01"
+    },
+    {
+      "id": "jurisdiction:us-nc-pamlico-county",
+      "parent": "jurisdiction:us-nc",
+      "level": "COUNTY",
+      "name": "Pamlico County",
+      "country": "US",
+      "timezone": "America/New_York",
+      "effectiveFrom": "2000-01-01"
+    },
+    {
+      "id": "jurisdiction:us-nc-pasquotank-county",
+      "parent": "jurisdiction:us-nc",
+      "level": "COUNTY",
+      "name": "Pasquotank County",
+      "country": "US",
+      "timezone": "America/New_York",
+      "effectiveFrom": "2000-01-01"
+    },
+    {
+      "id": "jurisdiction:us-nc-pender-county",
+      "parent": "jurisdiction:us-nc",
+      "level": "COUNTY",
+      "name": "Pender County",
+      "country": "US",
+      "timezone": "America/New_York",
+      "effectiveFrom": "2000-01-01"
+    },
+    {
+      "id": "jurisdiction:us-nc-perquimans-county",
+      "parent": "jurisdiction:us-nc",
+      "level": "COUNTY",
+      "name": "Perquimans County",
+      "country": "US",
+      "timezone": "America/New_York",
+      "effectiveFrom": "2000-01-01"
+    },
+    {
+      "id": "jurisdiction:us-nc-person-county",
+      "parent": "jurisdiction:us-nc",
+      "level": "COUNTY",
+      "name": "Person County",
+      "country": "US",
+      "timezone": "America/New_York",
+      "effectiveFrom": "2000-01-01"
+    },
+    {
+      "id": "jurisdiction:us-nc-pitt-county",
+      "parent": "jurisdiction:us-nc",
+      "level": "COUNTY",
+      "name": "Pitt County",
+      "country": "US",
+      "timezone": "America/New_York",
+      "effectiveFrom": "2000-01-01"
+    },
+    {
+      "id": "jurisdiction:us-nc-polk-county",
+      "parent": "jurisdiction:us-nc",
+      "level": "COUNTY",
+      "name": "Polk County",
+      "country": "US",
+      "timezone": "America/New_York",
+      "effectiveFrom": "2000-01-01"
+    },
+    {
+      "id": "jurisdiction:us-nc-randolph-county",
+      "parent": "jurisdiction:us-nc",
+      "level": "COUNTY",
+      "name": "Randolph County",
+      "country": "US",
+      "timezone": "America/New_York",
+      "effectiveFrom": "2000-01-01"
+    },
+    {
+      "id": "jurisdiction:us-nc-richmond-county",
+      "parent": "jurisdiction:us-nc",
+      "level": "COUNTY",
+      "name": "Richmond County",
+      "country": "US",
+      "timezone": "America/New_York",
+      "effectiveFrom": "2000-01-01"
+    },
+    {
+      "id": "jurisdiction:us-nc-robeson-county",
+      "parent": "jurisdiction:us-nc",
+      "level": "COUNTY",
+      "name": "Robeson County",
+      "country": "US",
+      "timezone": "America/New_York",
+      "effectiveFrom": "2000-01-01"
+    },
+    {
+      "id": "jurisdiction:us-nc-rockingham-county",
+      "parent": "jurisdiction:us-nc",
+      "level": "COUNTY",
+      "name": "Rockingham County",
+      "country": "US",
+      "timezone": "America/New_York",
+      "effectiveFrom": "2000-01-01"
+    },
+    {
+      "id": "jurisdiction:us-nc-rowan-county",
+      "parent": "jurisdiction:us-nc",
+      "level": "COUNTY",
+      "name": "Rowan County",
+      "country": "US",
+      "timezone": "America/New_York",
+      "effectiveFrom": "2000-01-01"
+    },
+    {
+      "id": "jurisdiction:us-nc-rutherford-county",
+      "parent": "jurisdiction:us-nc",
+      "level": "COUNTY",
+      "name": "Rutherford County",
+      "country": "US",
+      "timezone": "America/New_York",
+      "effectiveFrom": "2000-01-01"
+    },
+    {
+      "id": "jurisdiction:us-nc-sampson-county",
+      "parent": "jurisdiction:us-nc",
+      "level": "COUNTY",
+      "name": "Sampson County",
+      "country": "US",
+      "timezone": "America/New_York",
+      "effectiveFrom": "2000-01-01"
+    },
+    {
+      "id": "jurisdiction:us-nc-scotland-county",
+      "parent": "jurisdiction:us-nc",
+      "level": "COUNTY",
+      "name": "Scotland County",
+      "country": "US",
+      "timezone": "America/New_York",
+      "effectiveFrom": "2000-01-01"
+    },
+    {
+      "id": "jurisdiction:us-nc-stanly-county",
+      "parent": "jurisdiction:us-nc",
+      "level": "COUNTY",
+      "name": "Stanly County",
+      "country": "US",
+      "timezone": "America/New_York",
+      "effectiveFrom": "2000-01-01"
+    },
+    {
+      "id": "jurisdiction:us-nc-stokes-county",
+      "parent": "jurisdiction:us-nc",
+      "level": "COUNTY",
+      "name": "Stokes County",
+      "country": "US",
+      "timezone": "America/New_York",
+      "effectiveFrom": "2000-01-01"
+    },
+    {
+      "id": "jurisdiction:us-nc-surry-county",
+      "parent": "jurisdiction:us-nc",
+      "level": "COUNTY",
+      "name": "Surry County",
+      "country": "US",
+      "timezone": "America/New_York",
+      "effectiveFrom": "2000-01-01"
+    },
+    {
+      "id": "jurisdiction:us-nc-swain-county",
+      "parent": "jurisdiction:us-nc",
+      "level": "COUNTY",
+      "name": "Swain County",
+      "country": "US",
+      "timezone": "America/New_York",
+      "effectiveFrom": "2000-01-01"
+    },
+    {
+      "id": "jurisdiction:us-nc-transylvania-county",
+      "parent": "jurisdiction:us-nc",
+      "level": "COUNTY",
+      "name": "Transylvania County",
+      "country": "US",
+      "timezone": "America/New_York",
+      "effectiveFrom": "2000-01-01"
+    },
+    {
+      "id": "jurisdiction:us-nc-tyrrell-county",
+      "parent": "jurisdiction:us-nc",
+      "level": "COUNTY",
+      "name": "Tyrrell County",
+      "country": "US",
+      "timezone": "America/New_York",
+      "effectiveFrom": "2000-01-01"
+    },
+    {
+      "id": "jurisdiction:us-nc-union-county",
+      "parent": "jurisdiction:us-nc",
+      "level": "COUNTY",
+      "name": "Union County",
+      "country": "US",
+      "timezone": "America/New_York",
+      "effectiveFrom": "2000-01-01"
+    },
+    {
+      "id": "jurisdiction:us-nc-vance-county",
+      "parent": "jurisdiction:us-nc",
+      "level": "COUNTY",
+      "name": "Vance County",
+      "country": "US",
+      "timezone": "America/New_York",
+      "effectiveFrom": "2000-01-01"
+    },
+    {
+      "id": "jurisdiction:us-nc-wake-county",
+      "parent": "jurisdiction:us-nc",
+      "level": "COUNTY",
+      "name": "Wake County",
+      "country": "US",
+      "timezone": "America/New_York",
+      "effectiveFrom": "2000-01-01"
+    },
+    {
+      "id": "jurisdiction:us-nc-warren-county",
+      "parent": "jurisdiction:us-nc",
+      "level": "COUNTY",
+      "name": "Warren County",
+      "country": "US",
+      "timezone": "America/New_York",
+      "effectiveFrom": "2000-01-01"
+    },
+    {
+      "id": "jurisdiction:us-nc-washington-county",
+      "parent": "jurisdiction:us-nc",
+      "level": "COUNTY",
+      "name": "Washington County",
+      "country": "US",
+      "timezone": "America/New_York",
+      "effectiveFrom": "2000-01-01"
+    },
+    {
+      "id": "jurisdiction:us-nc-watauga-county",
+      "parent": "jurisdiction:us-nc",
+      "level": "COUNTY",
+      "name": "Watauga County",
+      "country": "US",
+      "timezone": "America/New_York",
+      "effectiveFrom": "2000-01-01"
+    },
+    {
+      "id": "jurisdiction:us-nc-wayne-county",
+      "parent": "jurisdiction:us-nc",
+      "level": "COUNTY",
+      "name": "Wayne County",
+      "country": "US",
+      "timezone": "America/New_York",
+      "effectiveFrom": "2000-01-01"
+    },
+    {
+      "id": "jurisdiction:us-nc-wilkes-county",
+      "parent": "jurisdiction:us-nc",
+      "level": "COUNTY",
+      "name": "Wilkes County",
+      "country": "US",
+      "timezone": "America/New_York",
+      "effectiveFrom": "2000-01-01"
+    },
+    {
+      "id": "jurisdiction:us-nc-wilson-county",
+      "parent": "jurisdiction:us-nc",
+      "level": "COUNTY",
+      "name": "Wilson County",
+      "country": "US",
+      "timezone": "America/New_York",
+      "effectiveFrom": "2000-01-01"
+    },
+    {
+      "id": "jurisdiction:us-nc-yadkin-county",
+      "parent": "jurisdiction:us-nc",
+      "level": "COUNTY",
+      "name": "Yadkin County",
+      "country": "US",
+      "timezone": "America/New_York",
+      "effectiveFrom": "2000-01-01"
+    },
+    {
+      "id": "jurisdiction:us-nc-yancey-county",
+      "parent": "jurisdiction:us-nc",
+      "level": "COUNTY",
+      "name": "Yancey County",
+      "country": "US",
       "timezone": "America/New_York",
       "effectiveFrom": "2000-01-01"
     },
@@ -2232,7 +3132,7 @@
         "basis": "LINE"
       },
       "source": "SRC-ZOIKO-US-STATE-TELECOM-2026",
-      "citation": "State-level sales, gross receipts and communications taxes on telecommunications by state. Wireless service is sourced to the customer's place of primary use (Mobile Telecommunications Sourcing Act, 4 U.S.C. §§116-126). Internet access is exempt nationwide (Internet Tax Freedom Act). Local taxes are modelled for New York City, Chicago and Los Angeles only, and apply when the evidence names the city's jurisdiction; a place named only by its state bears state taxes alone. Other county, city and special-district taxes, 911 and other per-line fees, the federal USF and federal excise are not modelled, nor is the interstate/intrastate split of fixed-line charges. Seller collects; there is no reverse charge."
+      "citation": "State-level sales, gross receipts and communications taxes on telecommunications by state. Wireless service is sourced to the customer's place of primary use (Mobile Telecommunications Sourcing Act, 4 U.S.C. §§116-126). Internet access is exempt nationwide (Internet Tax Freedom Act). Local taxes are modelled for New York City, Chicago and Los Angeles, and for North Carolina's 100 counties (local, transit and additional county sales tax on equipment, from the NCDOR historical and current rate tables, January 1, 2022 onward), and apply when the evidence names the city's jurisdiction; a place named only by its state bears state taxes alone. Other county, city and special-district taxes, 911 and other per-line fees, the federal USF and federal excise are not modelled, nor is the interstate/intrastate split of fixed-line charges. Seller collects; there is no reverse charge."
     }
   ],
   "components": [
@@ -11651,7 +12551,3803 @@
           "kind": "AD_VALOREM",
           "rate": "0.0475",
           "source": "SRC-ZOIKO-US-STATE-TELECOM-2026",
-          "citation": "North Carolina general State sales tax 4.75% (SUTB 1); local and transit rates are not modelled. https://www.ncdor.gov/taxes-forms/sales-and-use-tax/sales-and-use-tax-rates"
+          "citation": "North Carolina general State sales tax 4.75% (SUTB 1); county local and transit rates are separate components on each North Carolina county jurisdiction, applied when the evidence names the county. https://www.ncdor.gov/taxes-forms/sales-and-use-tax/sales-and-use-tax-rates"
+        }
+      ]
+    },
+    {
+      "id": "us-nc-alamance-county.local-goods",
+      "regime": "regime:us-state-taxes",
+      "authority": "authority:us-nc-dor",
+      "taxType": "SALES_TAX",
+      "services": [
+        "EQUIPMENT_SALE"
+      ],
+      "applies": [
+        {
+          "supply": "DOMESTIC",
+          "treatment": "CUSTOMER_CHARGE",
+          "responsibility": "seller-collects"
+        }
+      ],
+      "base": {
+        "kind": "LINE_NET"
+      },
+      "rounding": {
+        "mode": "HALF_UP",
+        "scale": 2,
+        "basis": "LINE"
+      },
+      "jurisdiction": "jurisdiction:us-nc-alamance-county",
+      "name": "Alamance County local sales tax on equipment (North Carolina)",
+      "emit": "US_NC_COUNTY_SALES_TAX",
+      "versions": [
+        {
+          "from": "2022-01-01",
+          "kind": "AD_VALOREM",
+          "rate": "0.02",
+          "source": "SRC-ZOIKO-US-NC-COUNTY-2026",
+          "citation": "Alamance County local sales and use tax 2.00% on retail sales of tangible personal property sourced to the county, on top of the 4.75% State rate. NCDOR total general State, local and transit rates (historical table; current table effective July 1, 2026). Not applied to telecommunications service, which bears the 7% combined general rate collected by the State. https://www.ncdor.gov/taxes-forms/sales-and-use-tax/sales-and-use-tax-rates/historical-total-general-state-local-and-transit-sales-and-use-tax-rates"
+        }
+      ]
+    },
+    {
+      "id": "us-nc-alexander-county.local-goods",
+      "regime": "regime:us-state-taxes",
+      "authority": "authority:us-nc-dor",
+      "taxType": "SALES_TAX",
+      "services": [
+        "EQUIPMENT_SALE"
+      ],
+      "applies": [
+        {
+          "supply": "DOMESTIC",
+          "treatment": "CUSTOMER_CHARGE",
+          "responsibility": "seller-collects"
+        }
+      ],
+      "base": {
+        "kind": "LINE_NET"
+      },
+      "rounding": {
+        "mode": "HALF_UP",
+        "scale": 2,
+        "basis": "LINE"
+      },
+      "jurisdiction": "jurisdiction:us-nc-alexander-county",
+      "name": "Alexander County local sales tax on equipment (North Carolina)",
+      "emit": "US_NC_COUNTY_SALES_TAX",
+      "versions": [
+        {
+          "from": "2022-01-01",
+          "kind": "AD_VALOREM",
+          "rate": "0.0225",
+          "source": "SRC-ZOIKO-US-NC-COUNTY-2026",
+          "citation": "Alexander County local sales and use tax 2.25% on retail sales of tangible personal property sourced to the county, on top of the 4.75% State rate. NCDOR total general State, local and transit rates (historical table; current table effective July 1, 2026). Not applied to telecommunications service, which bears the 7% combined general rate collected by the State. https://www.ncdor.gov/taxes-forms/sales-and-use-tax/sales-and-use-tax-rates/historical-total-general-state-local-and-transit-sales-and-use-tax-rates"
+        }
+      ]
+    },
+    {
+      "id": "us-nc-alleghany-county.local-goods",
+      "regime": "regime:us-state-taxes",
+      "authority": "authority:us-nc-dor",
+      "taxType": "SALES_TAX",
+      "services": [
+        "EQUIPMENT_SALE"
+      ],
+      "applies": [
+        {
+          "supply": "DOMESTIC",
+          "treatment": "CUSTOMER_CHARGE",
+          "responsibility": "seller-collects"
+        }
+      ],
+      "base": {
+        "kind": "LINE_NET"
+      },
+      "rounding": {
+        "mode": "HALF_UP",
+        "scale": 2,
+        "basis": "LINE"
+      },
+      "jurisdiction": "jurisdiction:us-nc-alleghany-county",
+      "name": "Alleghany County local sales tax on equipment (North Carolina)",
+      "emit": "US_NC_COUNTY_SALES_TAX",
+      "versions": [
+        {
+          "from": "2022-01-01",
+          "to": "2022-10-01",
+          "kind": "AD_VALOREM",
+          "rate": "0.02",
+          "source": "SRC-ZOIKO-US-NC-COUNTY-2026",
+          "citation": "Alleghany County local sales and use tax 2.00% on retail sales of tangible personal property sourced to the county, on top of the 4.75% State rate. NCDOR total general State, local and transit rates (historical table; current table effective July 1, 2026). Not applied to telecommunications service, which bears the 7% combined general rate collected by the State. https://www.ncdor.gov/taxes-forms/sales-and-use-tax/sales-and-use-tax-rates/historical-total-general-state-local-and-transit-sales-and-use-tax-rates"
+        },
+        {
+          "from": "2022-10-01",
+          "kind": "AD_VALOREM",
+          "rate": "0.0225",
+          "source": "SRC-ZOIKO-US-NC-COUNTY-2026",
+          "citation": "Alleghany County local sales and use tax 2.25% on retail sales of tangible personal property sourced to the county, on top of the 4.75% State rate. NCDOR total general State, local and transit rates (historical table; current table effective July 1, 2026). Not applied to telecommunications service, which bears the 7% combined general rate collected by the State. https://www.ncdor.gov/important-notice-local-sales-and-use-tax-rate-change-07-28-2022"
+        }
+      ]
+    },
+    {
+      "id": "us-nc-anson-county.local-goods",
+      "regime": "regime:us-state-taxes",
+      "authority": "authority:us-nc-dor",
+      "taxType": "SALES_TAX",
+      "services": [
+        "EQUIPMENT_SALE"
+      ],
+      "applies": [
+        {
+          "supply": "DOMESTIC",
+          "treatment": "CUSTOMER_CHARGE",
+          "responsibility": "seller-collects"
+        }
+      ],
+      "base": {
+        "kind": "LINE_NET"
+      },
+      "rounding": {
+        "mode": "HALF_UP",
+        "scale": 2,
+        "basis": "LINE"
+      },
+      "jurisdiction": "jurisdiction:us-nc-anson-county",
+      "name": "Anson County local sales tax on equipment (North Carolina)",
+      "emit": "US_NC_COUNTY_SALES_TAX",
+      "versions": [
+        {
+          "from": "2022-01-01",
+          "kind": "AD_VALOREM",
+          "rate": "0.0225",
+          "source": "SRC-ZOIKO-US-NC-COUNTY-2026",
+          "citation": "Anson County local sales and use tax 2.25% on retail sales of tangible personal property sourced to the county, on top of the 4.75% State rate. NCDOR total general State, local and transit rates (historical table; current table effective July 1, 2026). Not applied to telecommunications service, which bears the 7% combined general rate collected by the State. https://www.ncdor.gov/taxes-forms/sales-and-use-tax/sales-and-use-tax-rates/historical-total-general-state-local-and-transit-sales-and-use-tax-rates"
+        }
+      ]
+    },
+    {
+      "id": "us-nc-ashe-county.local-goods",
+      "regime": "regime:us-state-taxes",
+      "authority": "authority:us-nc-dor",
+      "taxType": "SALES_TAX",
+      "services": [
+        "EQUIPMENT_SALE"
+      ],
+      "applies": [
+        {
+          "supply": "DOMESTIC",
+          "treatment": "CUSTOMER_CHARGE",
+          "responsibility": "seller-collects"
+        }
+      ],
+      "base": {
+        "kind": "LINE_NET"
+      },
+      "rounding": {
+        "mode": "HALF_UP",
+        "scale": 2,
+        "basis": "LINE"
+      },
+      "jurisdiction": "jurisdiction:us-nc-ashe-county",
+      "name": "Ashe County local sales tax on equipment (North Carolina)",
+      "emit": "US_NC_COUNTY_SALES_TAX",
+      "versions": [
+        {
+          "from": "2022-01-01",
+          "kind": "AD_VALOREM",
+          "rate": "0.0225",
+          "source": "SRC-ZOIKO-US-NC-COUNTY-2026",
+          "citation": "Ashe County local sales and use tax 2.25% on retail sales of tangible personal property sourced to the county, on top of the 4.75% State rate. NCDOR total general State, local and transit rates (historical table; current table effective July 1, 2026). Not applied to telecommunications service, which bears the 7% combined general rate collected by the State. https://www.ncdor.gov/taxes-forms/sales-and-use-tax/sales-and-use-tax-rates/historical-total-general-state-local-and-transit-sales-and-use-tax-rates"
+        }
+      ]
+    },
+    {
+      "id": "us-nc-avery-county.local-goods",
+      "regime": "regime:us-state-taxes",
+      "authority": "authority:us-nc-dor",
+      "taxType": "SALES_TAX",
+      "services": [
+        "EQUIPMENT_SALE"
+      ],
+      "applies": [
+        {
+          "supply": "DOMESTIC",
+          "treatment": "CUSTOMER_CHARGE",
+          "responsibility": "seller-collects"
+        }
+      ],
+      "base": {
+        "kind": "LINE_NET"
+      },
+      "rounding": {
+        "mode": "HALF_UP",
+        "scale": 2,
+        "basis": "LINE"
+      },
+      "jurisdiction": "jurisdiction:us-nc-avery-county",
+      "name": "Avery County local sales tax on equipment (North Carolina)",
+      "emit": "US_NC_COUNTY_SALES_TAX",
+      "versions": [
+        {
+          "from": "2022-01-01",
+          "kind": "AD_VALOREM",
+          "rate": "0.02",
+          "source": "SRC-ZOIKO-US-NC-COUNTY-2026",
+          "citation": "Avery County local sales and use tax 2.00% on retail sales of tangible personal property sourced to the county, on top of the 4.75% State rate. NCDOR total general State, local and transit rates (historical table; current table effective July 1, 2026). Not applied to telecommunications service, which bears the 7% combined general rate collected by the State. https://www.ncdor.gov/taxes-forms/sales-and-use-tax/sales-and-use-tax-rates/historical-total-general-state-local-and-transit-sales-and-use-tax-rates"
+        }
+      ]
+    },
+    {
+      "id": "us-nc-beaufort-county.local-goods",
+      "regime": "regime:us-state-taxes",
+      "authority": "authority:us-nc-dor",
+      "taxType": "SALES_TAX",
+      "services": [
+        "EQUIPMENT_SALE"
+      ],
+      "applies": [
+        {
+          "supply": "DOMESTIC",
+          "treatment": "CUSTOMER_CHARGE",
+          "responsibility": "seller-collects"
+        }
+      ],
+      "base": {
+        "kind": "LINE_NET"
+      },
+      "rounding": {
+        "mode": "HALF_UP",
+        "scale": 2,
+        "basis": "LINE"
+      },
+      "jurisdiction": "jurisdiction:us-nc-beaufort-county",
+      "name": "Beaufort County local sales tax on equipment (North Carolina)",
+      "emit": "US_NC_COUNTY_SALES_TAX",
+      "versions": [
+        {
+          "from": "2022-01-01",
+          "kind": "AD_VALOREM",
+          "rate": "0.02",
+          "source": "SRC-ZOIKO-US-NC-COUNTY-2026",
+          "citation": "Beaufort County local sales and use tax 2.00% on retail sales of tangible personal property sourced to the county, on top of the 4.75% State rate. NCDOR total general State, local and transit rates (historical table; current table effective July 1, 2026). Not applied to telecommunications service, which bears the 7% combined general rate collected by the State. https://www.ncdor.gov/taxes-forms/sales-and-use-tax/sales-and-use-tax-rates/historical-total-general-state-local-and-transit-sales-and-use-tax-rates"
+        }
+      ]
+    },
+    {
+      "id": "us-nc-bertie-county.local-goods",
+      "regime": "regime:us-state-taxes",
+      "authority": "authority:us-nc-dor",
+      "taxType": "SALES_TAX",
+      "services": [
+        "EQUIPMENT_SALE"
+      ],
+      "applies": [
+        {
+          "supply": "DOMESTIC",
+          "treatment": "CUSTOMER_CHARGE",
+          "responsibility": "seller-collects"
+        }
+      ],
+      "base": {
+        "kind": "LINE_NET"
+      },
+      "rounding": {
+        "mode": "HALF_UP",
+        "scale": 2,
+        "basis": "LINE"
+      },
+      "jurisdiction": "jurisdiction:us-nc-bertie-county",
+      "name": "Bertie County local sales tax on equipment (North Carolina)",
+      "emit": "US_NC_COUNTY_SALES_TAX",
+      "versions": [
+        {
+          "from": "2022-01-01",
+          "kind": "AD_VALOREM",
+          "rate": "0.0225",
+          "source": "SRC-ZOIKO-US-NC-COUNTY-2026",
+          "citation": "Bertie County local sales and use tax 2.25% on retail sales of tangible personal property sourced to the county, on top of the 4.75% State rate. NCDOR total general State, local and transit rates (historical table; current table effective July 1, 2026). Not applied to telecommunications service, which bears the 7% combined general rate collected by the State. https://www.ncdor.gov/taxes-forms/sales-and-use-tax/sales-and-use-tax-rates/historical-total-general-state-local-and-transit-sales-and-use-tax-rates"
+        }
+      ]
+    },
+    {
+      "id": "us-nc-bladen-county.local-goods",
+      "regime": "regime:us-state-taxes",
+      "authority": "authority:us-nc-dor",
+      "taxType": "SALES_TAX",
+      "services": [
+        "EQUIPMENT_SALE"
+      ],
+      "applies": [
+        {
+          "supply": "DOMESTIC",
+          "treatment": "CUSTOMER_CHARGE",
+          "responsibility": "seller-collects"
+        }
+      ],
+      "base": {
+        "kind": "LINE_NET"
+      },
+      "rounding": {
+        "mode": "HALF_UP",
+        "scale": 2,
+        "basis": "LINE"
+      },
+      "jurisdiction": "jurisdiction:us-nc-bladen-county",
+      "name": "Bladen County local sales tax on equipment (North Carolina)",
+      "emit": "US_NC_COUNTY_SALES_TAX",
+      "versions": [
+        {
+          "from": "2022-01-01",
+          "kind": "AD_VALOREM",
+          "rate": "0.02",
+          "source": "SRC-ZOIKO-US-NC-COUNTY-2026",
+          "citation": "Bladen County local sales and use tax 2.00% on retail sales of tangible personal property sourced to the county, on top of the 4.75% State rate. NCDOR total general State, local and transit rates (historical table; current table effective July 1, 2026). Not applied to telecommunications service, which bears the 7% combined general rate collected by the State. https://www.ncdor.gov/taxes-forms/sales-and-use-tax/sales-and-use-tax-rates/historical-total-general-state-local-and-transit-sales-and-use-tax-rates"
+        }
+      ]
+    },
+    {
+      "id": "us-nc-brunswick-county.local-goods",
+      "regime": "regime:us-state-taxes",
+      "authority": "authority:us-nc-dor",
+      "taxType": "SALES_TAX",
+      "services": [
+        "EQUIPMENT_SALE"
+      ],
+      "applies": [
+        {
+          "supply": "DOMESTIC",
+          "treatment": "CUSTOMER_CHARGE",
+          "responsibility": "seller-collects"
+        }
+      ],
+      "base": {
+        "kind": "LINE_NET"
+      },
+      "rounding": {
+        "mode": "HALF_UP",
+        "scale": 2,
+        "basis": "LINE"
+      },
+      "jurisdiction": "jurisdiction:us-nc-brunswick-county",
+      "name": "Brunswick County local sales tax on equipment (North Carolina)",
+      "emit": "US_NC_COUNTY_SALES_TAX",
+      "versions": [
+        {
+          "from": "2022-01-01",
+          "kind": "AD_VALOREM",
+          "rate": "0.02",
+          "source": "SRC-ZOIKO-US-NC-COUNTY-2026",
+          "citation": "Brunswick County local sales and use tax 2.00% on retail sales of tangible personal property sourced to the county, on top of the 4.75% State rate. NCDOR total general State, local and transit rates (historical table; current table effective July 1, 2026). Not applied to telecommunications service, which bears the 7% combined general rate collected by the State. https://www.ncdor.gov/taxes-forms/sales-and-use-tax/sales-and-use-tax-rates/historical-total-general-state-local-and-transit-sales-and-use-tax-rates"
+        }
+      ]
+    },
+    {
+      "id": "us-nc-buncombe-county.local-goods",
+      "regime": "regime:us-state-taxes",
+      "authority": "authority:us-nc-dor",
+      "taxType": "SALES_TAX",
+      "services": [
+        "EQUIPMENT_SALE"
+      ],
+      "applies": [
+        {
+          "supply": "DOMESTIC",
+          "treatment": "CUSTOMER_CHARGE",
+          "responsibility": "seller-collects"
+        }
+      ],
+      "base": {
+        "kind": "LINE_NET"
+      },
+      "rounding": {
+        "mode": "HALF_UP",
+        "scale": 2,
+        "basis": "LINE"
+      },
+      "jurisdiction": "jurisdiction:us-nc-buncombe-county",
+      "name": "Buncombe County local sales tax on equipment (North Carolina)",
+      "emit": "US_NC_COUNTY_SALES_TAX",
+      "versions": [
+        {
+          "from": "2022-01-01",
+          "kind": "AD_VALOREM",
+          "rate": "0.0225",
+          "source": "SRC-ZOIKO-US-NC-COUNTY-2026",
+          "citation": "Buncombe County local sales and use tax 2.25% on retail sales of tangible personal property sourced to the county, on top of the 4.75% State rate. NCDOR total general State, local and transit rates (historical table; current table effective July 1, 2026). Not applied to telecommunications service, which bears the 7% combined general rate collected by the State. https://www.ncdor.gov/taxes-forms/sales-and-use-tax/sales-and-use-tax-rates/historical-total-general-state-local-and-transit-sales-and-use-tax-rates"
+        }
+      ]
+    },
+    {
+      "id": "us-nc-burke-county.local-goods",
+      "regime": "regime:us-state-taxes",
+      "authority": "authority:us-nc-dor",
+      "taxType": "SALES_TAX",
+      "services": [
+        "EQUIPMENT_SALE"
+      ],
+      "applies": [
+        {
+          "supply": "DOMESTIC",
+          "treatment": "CUSTOMER_CHARGE",
+          "responsibility": "seller-collects"
+        }
+      ],
+      "base": {
+        "kind": "LINE_NET"
+      },
+      "rounding": {
+        "mode": "HALF_UP",
+        "scale": 2,
+        "basis": "LINE"
+      },
+      "jurisdiction": "jurisdiction:us-nc-burke-county",
+      "name": "Burke County local sales tax on equipment (North Carolina)",
+      "emit": "US_NC_COUNTY_SALES_TAX",
+      "versions": [
+        {
+          "from": "2022-01-01",
+          "kind": "AD_VALOREM",
+          "rate": "0.02",
+          "source": "SRC-ZOIKO-US-NC-COUNTY-2026",
+          "citation": "Burke County local sales and use tax 2.00% on retail sales of tangible personal property sourced to the county, on top of the 4.75% State rate. NCDOR total general State, local and transit rates (historical table; current table effective July 1, 2026). Not applied to telecommunications service, which bears the 7% combined general rate collected by the State. https://www.ncdor.gov/taxes-forms/sales-and-use-tax/sales-and-use-tax-rates/historical-total-general-state-local-and-transit-sales-and-use-tax-rates"
+        }
+      ]
+    },
+    {
+      "id": "us-nc-cabarrus-county.local-goods",
+      "regime": "regime:us-state-taxes",
+      "authority": "authority:us-nc-dor",
+      "taxType": "SALES_TAX",
+      "services": [
+        "EQUIPMENT_SALE"
+      ],
+      "applies": [
+        {
+          "supply": "DOMESTIC",
+          "treatment": "CUSTOMER_CHARGE",
+          "responsibility": "seller-collects"
+        }
+      ],
+      "base": {
+        "kind": "LINE_NET"
+      },
+      "rounding": {
+        "mode": "HALF_UP",
+        "scale": 2,
+        "basis": "LINE"
+      },
+      "jurisdiction": "jurisdiction:us-nc-cabarrus-county",
+      "name": "Cabarrus County local sales tax on equipment (North Carolina)",
+      "emit": "US_NC_COUNTY_SALES_TAX",
+      "versions": [
+        {
+          "from": "2022-01-01",
+          "kind": "AD_VALOREM",
+          "rate": "0.0225",
+          "source": "SRC-ZOIKO-US-NC-COUNTY-2026",
+          "citation": "Cabarrus County local sales and use tax 2.25% on retail sales of tangible personal property sourced to the county, on top of the 4.75% State rate. NCDOR total general State, local and transit rates (historical table; current table effective July 1, 2026). Not applied to telecommunications service, which bears the 7% combined general rate collected by the State. https://www.ncdor.gov/taxes-forms/sales-and-use-tax/sales-and-use-tax-rates/historical-total-general-state-local-and-transit-sales-and-use-tax-rates"
+        }
+      ]
+    },
+    {
+      "id": "us-nc-caldwell-county.local-goods",
+      "regime": "regime:us-state-taxes",
+      "authority": "authority:us-nc-dor",
+      "taxType": "SALES_TAX",
+      "services": [
+        "EQUIPMENT_SALE"
+      ],
+      "applies": [
+        {
+          "supply": "DOMESTIC",
+          "treatment": "CUSTOMER_CHARGE",
+          "responsibility": "seller-collects"
+        }
+      ],
+      "base": {
+        "kind": "LINE_NET"
+      },
+      "rounding": {
+        "mode": "HALF_UP",
+        "scale": 2,
+        "basis": "LINE"
+      },
+      "jurisdiction": "jurisdiction:us-nc-caldwell-county",
+      "name": "Caldwell County local sales tax on equipment (North Carolina)",
+      "emit": "US_NC_COUNTY_SALES_TAX",
+      "versions": [
+        {
+          "from": "2022-01-01",
+          "kind": "AD_VALOREM",
+          "rate": "0.02",
+          "source": "SRC-ZOIKO-US-NC-COUNTY-2026",
+          "citation": "Caldwell County local sales and use tax 2.00% on retail sales of tangible personal property sourced to the county, on top of the 4.75% State rate. NCDOR total general State, local and transit rates (historical table; current table effective July 1, 2026). Not applied to telecommunications service, which bears the 7% combined general rate collected by the State. https://www.ncdor.gov/taxes-forms/sales-and-use-tax/sales-and-use-tax-rates/historical-total-general-state-local-and-transit-sales-and-use-tax-rates"
+        }
+      ]
+    },
+    {
+      "id": "us-nc-camden-county.local-goods",
+      "regime": "regime:us-state-taxes",
+      "authority": "authority:us-nc-dor",
+      "taxType": "SALES_TAX",
+      "services": [
+        "EQUIPMENT_SALE"
+      ],
+      "applies": [
+        {
+          "supply": "DOMESTIC",
+          "treatment": "CUSTOMER_CHARGE",
+          "responsibility": "seller-collects"
+        }
+      ],
+      "base": {
+        "kind": "LINE_NET"
+      },
+      "rounding": {
+        "mode": "HALF_UP",
+        "scale": 2,
+        "basis": "LINE"
+      },
+      "jurisdiction": "jurisdiction:us-nc-camden-county",
+      "name": "Camden County local sales tax on equipment (North Carolina)",
+      "emit": "US_NC_COUNTY_SALES_TAX",
+      "versions": [
+        {
+          "from": "2022-01-01",
+          "kind": "AD_VALOREM",
+          "rate": "0.02",
+          "source": "SRC-ZOIKO-US-NC-COUNTY-2026",
+          "citation": "Camden County local sales and use tax 2.00% on retail sales of tangible personal property sourced to the county, on top of the 4.75% State rate. NCDOR total general State, local and transit rates (historical table; current table effective July 1, 2026). Not applied to telecommunications service, which bears the 7% combined general rate collected by the State. https://www.ncdor.gov/taxes-forms/sales-and-use-tax/sales-and-use-tax-rates/historical-total-general-state-local-and-transit-sales-and-use-tax-rates"
+        }
+      ]
+    },
+    {
+      "id": "us-nc-carteret-county.local-goods",
+      "regime": "regime:us-state-taxes",
+      "authority": "authority:us-nc-dor",
+      "taxType": "SALES_TAX",
+      "services": [
+        "EQUIPMENT_SALE"
+      ],
+      "applies": [
+        {
+          "supply": "DOMESTIC",
+          "treatment": "CUSTOMER_CHARGE",
+          "responsibility": "seller-collects"
+        }
+      ],
+      "base": {
+        "kind": "LINE_NET"
+      },
+      "rounding": {
+        "mode": "HALF_UP",
+        "scale": 2,
+        "basis": "LINE"
+      },
+      "jurisdiction": "jurisdiction:us-nc-carteret-county",
+      "name": "Carteret County local sales tax on equipment (North Carolina)",
+      "emit": "US_NC_COUNTY_SALES_TAX",
+      "versions": [
+        {
+          "from": "2022-01-01",
+          "kind": "AD_VALOREM",
+          "rate": "0.02",
+          "source": "SRC-ZOIKO-US-NC-COUNTY-2026",
+          "citation": "Carteret County local sales and use tax 2.00% on retail sales of tangible personal property sourced to the county, on top of the 4.75% State rate. NCDOR total general State, local and transit rates (historical table; current table effective July 1, 2026). Not applied to telecommunications service, which bears the 7% combined general rate collected by the State. https://www.ncdor.gov/taxes-forms/sales-and-use-tax/sales-and-use-tax-rates/historical-total-general-state-local-and-transit-sales-and-use-tax-rates"
+        }
+      ]
+    },
+    {
+      "id": "us-nc-caswell-county.local-goods",
+      "regime": "regime:us-state-taxes",
+      "authority": "authority:us-nc-dor",
+      "taxType": "SALES_TAX",
+      "services": [
+        "EQUIPMENT_SALE"
+      ],
+      "applies": [
+        {
+          "supply": "DOMESTIC",
+          "treatment": "CUSTOMER_CHARGE",
+          "responsibility": "seller-collects"
+        }
+      ],
+      "base": {
+        "kind": "LINE_NET"
+      },
+      "rounding": {
+        "mode": "HALF_UP",
+        "scale": 2,
+        "basis": "LINE"
+      },
+      "jurisdiction": "jurisdiction:us-nc-caswell-county",
+      "name": "Caswell County local sales tax on equipment (North Carolina)",
+      "emit": "US_NC_COUNTY_SALES_TAX",
+      "versions": [
+        {
+          "from": "2022-01-01",
+          "kind": "AD_VALOREM",
+          "rate": "0.02",
+          "source": "SRC-ZOIKO-US-NC-COUNTY-2026",
+          "citation": "Caswell County local sales and use tax 2.00% on retail sales of tangible personal property sourced to the county, on top of the 4.75% State rate. NCDOR total general State, local and transit rates (historical table; current table effective July 1, 2026). Not applied to telecommunications service, which bears the 7% combined general rate collected by the State. https://www.ncdor.gov/taxes-forms/sales-and-use-tax/sales-and-use-tax-rates/historical-total-general-state-local-and-transit-sales-and-use-tax-rates"
+        }
+      ]
+    },
+    {
+      "id": "us-nc-catawba-county.local-goods",
+      "regime": "regime:us-state-taxes",
+      "authority": "authority:us-nc-dor",
+      "taxType": "SALES_TAX",
+      "services": [
+        "EQUIPMENT_SALE"
+      ],
+      "applies": [
+        {
+          "supply": "DOMESTIC",
+          "treatment": "CUSTOMER_CHARGE",
+          "responsibility": "seller-collects"
+        }
+      ],
+      "base": {
+        "kind": "LINE_NET"
+      },
+      "rounding": {
+        "mode": "HALF_UP",
+        "scale": 2,
+        "basis": "LINE"
+      },
+      "jurisdiction": "jurisdiction:us-nc-catawba-county",
+      "name": "Catawba County local sales tax on equipment (North Carolina)",
+      "emit": "US_NC_COUNTY_SALES_TAX",
+      "versions": [
+        {
+          "from": "2022-01-01",
+          "kind": "AD_VALOREM",
+          "rate": "0.0225",
+          "source": "SRC-ZOIKO-US-NC-COUNTY-2026",
+          "citation": "Catawba County local sales and use tax 2.25% on retail sales of tangible personal property sourced to the county, on top of the 4.75% State rate. NCDOR total general State, local and transit rates (historical table; current table effective July 1, 2026). Not applied to telecommunications service, which bears the 7% combined general rate collected by the State. https://www.ncdor.gov/taxes-forms/sales-and-use-tax/sales-and-use-tax-rates/historical-total-general-state-local-and-transit-sales-and-use-tax-rates"
+        }
+      ]
+    },
+    {
+      "id": "us-nc-chatham-county.local-goods",
+      "regime": "regime:us-state-taxes",
+      "authority": "authority:us-nc-dor",
+      "taxType": "SALES_TAX",
+      "services": [
+        "EQUIPMENT_SALE"
+      ],
+      "applies": [
+        {
+          "supply": "DOMESTIC",
+          "treatment": "CUSTOMER_CHARGE",
+          "responsibility": "seller-collects"
+        }
+      ],
+      "base": {
+        "kind": "LINE_NET"
+      },
+      "rounding": {
+        "mode": "HALF_UP",
+        "scale": 2,
+        "basis": "LINE"
+      },
+      "jurisdiction": "jurisdiction:us-nc-chatham-county",
+      "name": "Chatham County local sales tax on equipment (North Carolina)",
+      "emit": "US_NC_COUNTY_SALES_TAX",
+      "versions": [
+        {
+          "from": "2022-01-01",
+          "kind": "AD_VALOREM",
+          "rate": "0.0225",
+          "source": "SRC-ZOIKO-US-NC-COUNTY-2026",
+          "citation": "Chatham County local sales and use tax 2.25% on retail sales of tangible personal property sourced to the county, on top of the 4.75% State rate. NCDOR total general State, local and transit rates (historical table; current table effective July 1, 2026). Not applied to telecommunications service, which bears the 7% combined general rate collected by the State. https://www.ncdor.gov/taxes-forms/sales-and-use-tax/sales-and-use-tax-rates/historical-total-general-state-local-and-transit-sales-and-use-tax-rates"
+        }
+      ]
+    },
+    {
+      "id": "us-nc-cherokee-county.local-goods",
+      "regime": "regime:us-state-taxes",
+      "authority": "authority:us-nc-dor",
+      "taxType": "SALES_TAX",
+      "services": [
+        "EQUIPMENT_SALE"
+      ],
+      "applies": [
+        {
+          "supply": "DOMESTIC",
+          "treatment": "CUSTOMER_CHARGE",
+          "responsibility": "seller-collects"
+        }
+      ],
+      "base": {
+        "kind": "LINE_NET"
+      },
+      "rounding": {
+        "mode": "HALF_UP",
+        "scale": 2,
+        "basis": "LINE"
+      },
+      "jurisdiction": "jurisdiction:us-nc-cherokee-county",
+      "name": "Cherokee County local sales tax on equipment (North Carolina)",
+      "emit": "US_NC_COUNTY_SALES_TAX",
+      "versions": [
+        {
+          "from": "2022-01-01",
+          "kind": "AD_VALOREM",
+          "rate": "0.0225",
+          "source": "SRC-ZOIKO-US-NC-COUNTY-2026",
+          "citation": "Cherokee County local sales and use tax 2.25% on retail sales of tangible personal property sourced to the county, on top of the 4.75% State rate. NCDOR total general State, local and transit rates (historical table; current table effective July 1, 2026). Not applied to telecommunications service, which bears the 7% combined general rate collected by the State. https://www.ncdor.gov/taxes-forms/sales-and-use-tax/sales-and-use-tax-rates/historical-total-general-state-local-and-transit-sales-and-use-tax-rates"
+        }
+      ]
+    },
+    {
+      "id": "us-nc-chowan-county.local-goods",
+      "regime": "regime:us-state-taxes",
+      "authority": "authority:us-nc-dor",
+      "taxType": "SALES_TAX",
+      "services": [
+        "EQUIPMENT_SALE"
+      ],
+      "applies": [
+        {
+          "supply": "DOMESTIC",
+          "treatment": "CUSTOMER_CHARGE",
+          "responsibility": "seller-collects"
+        }
+      ],
+      "base": {
+        "kind": "LINE_NET"
+      },
+      "rounding": {
+        "mode": "HALF_UP",
+        "scale": 2,
+        "basis": "LINE"
+      },
+      "jurisdiction": "jurisdiction:us-nc-chowan-county",
+      "name": "Chowan County local sales tax on equipment (North Carolina)",
+      "emit": "US_NC_COUNTY_SALES_TAX",
+      "versions": [
+        {
+          "from": "2022-01-01",
+          "kind": "AD_VALOREM",
+          "rate": "0.02",
+          "source": "SRC-ZOIKO-US-NC-COUNTY-2026",
+          "citation": "Chowan County local sales and use tax 2.00% on retail sales of tangible personal property sourced to the county, on top of the 4.75% State rate. NCDOR total general State, local and transit rates (historical table; current table effective July 1, 2026). Not applied to telecommunications service, which bears the 7% combined general rate collected by the State. https://www.ncdor.gov/taxes-forms/sales-and-use-tax/sales-and-use-tax-rates/historical-total-general-state-local-and-transit-sales-and-use-tax-rates"
+        }
+      ]
+    },
+    {
+      "id": "us-nc-clay-county.local-goods",
+      "regime": "regime:us-state-taxes",
+      "authority": "authority:us-nc-dor",
+      "taxType": "SALES_TAX",
+      "services": [
+        "EQUIPMENT_SALE"
+      ],
+      "applies": [
+        {
+          "supply": "DOMESTIC",
+          "treatment": "CUSTOMER_CHARGE",
+          "responsibility": "seller-collects"
+        }
+      ],
+      "base": {
+        "kind": "LINE_NET"
+      },
+      "rounding": {
+        "mode": "HALF_UP",
+        "scale": 2,
+        "basis": "LINE"
+      },
+      "jurisdiction": "jurisdiction:us-nc-clay-county",
+      "name": "Clay County local sales tax on equipment (North Carolina)",
+      "emit": "US_NC_COUNTY_SALES_TAX",
+      "versions": [
+        {
+          "from": "2022-01-01",
+          "kind": "AD_VALOREM",
+          "rate": "0.0225",
+          "source": "SRC-ZOIKO-US-NC-COUNTY-2026",
+          "citation": "Clay County local sales and use tax 2.25% on retail sales of tangible personal property sourced to the county, on top of the 4.75% State rate. NCDOR total general State, local and transit rates (historical table; current table effective July 1, 2026). Not applied to telecommunications service, which bears the 7% combined general rate collected by the State. https://www.ncdor.gov/taxes-forms/sales-and-use-tax/sales-and-use-tax-rates/historical-total-general-state-local-and-transit-sales-and-use-tax-rates"
+        }
+      ]
+    },
+    {
+      "id": "us-nc-cleveland-county.local-goods",
+      "regime": "regime:us-state-taxes",
+      "authority": "authority:us-nc-dor",
+      "taxType": "SALES_TAX",
+      "services": [
+        "EQUIPMENT_SALE"
+      ],
+      "applies": [
+        {
+          "supply": "DOMESTIC",
+          "treatment": "CUSTOMER_CHARGE",
+          "responsibility": "seller-collects"
+        }
+      ],
+      "base": {
+        "kind": "LINE_NET"
+      },
+      "rounding": {
+        "mode": "HALF_UP",
+        "scale": 2,
+        "basis": "LINE"
+      },
+      "jurisdiction": "jurisdiction:us-nc-cleveland-county",
+      "name": "Cleveland County local sales tax on equipment (North Carolina)",
+      "emit": "US_NC_COUNTY_SALES_TAX",
+      "versions": [
+        {
+          "from": "2022-01-01",
+          "kind": "AD_VALOREM",
+          "rate": "0.02",
+          "source": "SRC-ZOIKO-US-NC-COUNTY-2026",
+          "citation": "Cleveland County local sales and use tax 2.00% on retail sales of tangible personal property sourced to the county, on top of the 4.75% State rate. NCDOR total general State, local and transit rates (historical table; current table effective July 1, 2026). Not applied to telecommunications service, which bears the 7% combined general rate collected by the State. https://www.ncdor.gov/taxes-forms/sales-and-use-tax/sales-and-use-tax-rates/historical-total-general-state-local-and-transit-sales-and-use-tax-rates"
+        }
+      ]
+    },
+    {
+      "id": "us-nc-columbus-county.local-goods",
+      "regime": "regime:us-state-taxes",
+      "authority": "authority:us-nc-dor",
+      "taxType": "SALES_TAX",
+      "services": [
+        "EQUIPMENT_SALE"
+      ],
+      "applies": [
+        {
+          "supply": "DOMESTIC",
+          "treatment": "CUSTOMER_CHARGE",
+          "responsibility": "seller-collects"
+        }
+      ],
+      "base": {
+        "kind": "LINE_NET"
+      },
+      "rounding": {
+        "mode": "HALF_UP",
+        "scale": 2,
+        "basis": "LINE"
+      },
+      "jurisdiction": "jurisdiction:us-nc-columbus-county",
+      "name": "Columbus County local sales tax on equipment (North Carolina)",
+      "emit": "US_NC_COUNTY_SALES_TAX",
+      "versions": [
+        {
+          "from": "2022-01-01",
+          "kind": "AD_VALOREM",
+          "rate": "0.02",
+          "source": "SRC-ZOIKO-US-NC-COUNTY-2026",
+          "citation": "Columbus County local sales and use tax 2.00% on retail sales of tangible personal property sourced to the county, on top of the 4.75% State rate. NCDOR total general State, local and transit rates (historical table; current table effective July 1, 2026). Not applied to telecommunications service, which bears the 7% combined general rate collected by the State. https://www.ncdor.gov/taxes-forms/sales-and-use-tax/sales-and-use-tax-rates/historical-total-general-state-local-and-transit-sales-and-use-tax-rates"
+        }
+      ]
+    },
+    {
+      "id": "us-nc-craven-county.local-goods",
+      "regime": "regime:us-state-taxes",
+      "authority": "authority:us-nc-dor",
+      "taxType": "SALES_TAX",
+      "services": [
+        "EQUIPMENT_SALE"
+      ],
+      "applies": [
+        {
+          "supply": "DOMESTIC",
+          "treatment": "CUSTOMER_CHARGE",
+          "responsibility": "seller-collects"
+        }
+      ],
+      "base": {
+        "kind": "LINE_NET"
+      },
+      "rounding": {
+        "mode": "HALF_UP",
+        "scale": 2,
+        "basis": "LINE"
+      },
+      "jurisdiction": "jurisdiction:us-nc-craven-county",
+      "name": "Craven County local sales tax on equipment (North Carolina)",
+      "emit": "US_NC_COUNTY_SALES_TAX",
+      "versions": [
+        {
+          "from": "2022-01-01",
+          "kind": "AD_VALOREM",
+          "rate": "0.02",
+          "source": "SRC-ZOIKO-US-NC-COUNTY-2026",
+          "citation": "Craven County local sales and use tax 2.00% on retail sales of tangible personal property sourced to the county, on top of the 4.75% State rate. NCDOR total general State, local and transit rates (historical table; current table effective July 1, 2026). Not applied to telecommunications service, which bears the 7% combined general rate collected by the State. https://www.ncdor.gov/taxes-forms/sales-and-use-tax/sales-and-use-tax-rates/historical-total-general-state-local-and-transit-sales-and-use-tax-rates"
+        }
+      ]
+    },
+    {
+      "id": "us-nc-cumberland-county.local-goods",
+      "regime": "regime:us-state-taxes",
+      "authority": "authority:us-nc-dor",
+      "taxType": "SALES_TAX",
+      "services": [
+        "EQUIPMENT_SALE"
+      ],
+      "applies": [
+        {
+          "supply": "DOMESTIC",
+          "treatment": "CUSTOMER_CHARGE",
+          "responsibility": "seller-collects"
+        }
+      ],
+      "base": {
+        "kind": "LINE_NET"
+      },
+      "rounding": {
+        "mode": "HALF_UP",
+        "scale": 2,
+        "basis": "LINE"
+      },
+      "jurisdiction": "jurisdiction:us-nc-cumberland-county",
+      "name": "Cumberland County local sales tax on equipment (North Carolina)",
+      "emit": "US_NC_COUNTY_SALES_TAX",
+      "versions": [
+        {
+          "from": "2022-01-01",
+          "kind": "AD_VALOREM",
+          "rate": "0.0225",
+          "source": "SRC-ZOIKO-US-NC-COUNTY-2026",
+          "citation": "Cumberland County local sales and use tax 2.25% on retail sales of tangible personal property sourced to the county, on top of the 4.75% State rate. NCDOR total general State, local and transit rates (historical table; current table effective July 1, 2026). Not applied to telecommunications service, which bears the 7% combined general rate collected by the State. https://www.ncdor.gov/taxes-forms/sales-and-use-tax/sales-and-use-tax-rates/historical-total-general-state-local-and-transit-sales-and-use-tax-rates"
+        }
+      ]
+    },
+    {
+      "id": "us-nc-currituck-county.local-goods",
+      "regime": "regime:us-state-taxes",
+      "authority": "authority:us-nc-dor",
+      "taxType": "SALES_TAX",
+      "services": [
+        "EQUIPMENT_SALE"
+      ],
+      "applies": [
+        {
+          "supply": "DOMESTIC",
+          "treatment": "CUSTOMER_CHARGE",
+          "responsibility": "seller-collects"
+        }
+      ],
+      "base": {
+        "kind": "LINE_NET"
+      },
+      "rounding": {
+        "mode": "HALF_UP",
+        "scale": 2,
+        "basis": "LINE"
+      },
+      "jurisdiction": "jurisdiction:us-nc-currituck-county",
+      "name": "Currituck County local sales tax on equipment (North Carolina)",
+      "emit": "US_NC_COUNTY_SALES_TAX",
+      "versions": [
+        {
+          "from": "2022-01-01",
+          "kind": "AD_VALOREM",
+          "rate": "0.02",
+          "source": "SRC-ZOIKO-US-NC-COUNTY-2026",
+          "citation": "Currituck County local sales and use tax 2.00% on retail sales of tangible personal property sourced to the county, on top of the 4.75% State rate. NCDOR total general State, local and transit rates (historical table; current table effective July 1, 2026). Not applied to telecommunications service, which bears the 7% combined general rate collected by the State. https://www.ncdor.gov/taxes-forms/sales-and-use-tax/sales-and-use-tax-rates/historical-total-general-state-local-and-transit-sales-and-use-tax-rates"
+        }
+      ]
+    },
+    {
+      "id": "us-nc-dare-county.local-goods",
+      "regime": "regime:us-state-taxes",
+      "authority": "authority:us-nc-dor",
+      "taxType": "SALES_TAX",
+      "services": [
+        "EQUIPMENT_SALE"
+      ],
+      "applies": [
+        {
+          "supply": "DOMESTIC",
+          "treatment": "CUSTOMER_CHARGE",
+          "responsibility": "seller-collects"
+        }
+      ],
+      "base": {
+        "kind": "LINE_NET"
+      },
+      "rounding": {
+        "mode": "HALF_UP",
+        "scale": 2,
+        "basis": "LINE"
+      },
+      "jurisdiction": "jurisdiction:us-nc-dare-county",
+      "name": "Dare County local sales tax on equipment (North Carolina)",
+      "emit": "US_NC_COUNTY_SALES_TAX",
+      "versions": [
+        {
+          "from": "2022-01-01",
+          "kind": "AD_VALOREM",
+          "rate": "0.02",
+          "source": "SRC-ZOIKO-US-NC-COUNTY-2026",
+          "citation": "Dare County local sales and use tax 2.00% on retail sales of tangible personal property sourced to the county, on top of the 4.75% State rate. NCDOR total general State, local and transit rates (historical table; current table effective July 1, 2026). Not applied to telecommunications service, which bears the 7% combined general rate collected by the State. https://www.ncdor.gov/taxes-forms/sales-and-use-tax/sales-and-use-tax-rates/historical-total-general-state-local-and-transit-sales-and-use-tax-rates"
+        }
+      ]
+    },
+    {
+      "id": "us-nc-davidson-county.local-goods",
+      "regime": "regime:us-state-taxes",
+      "authority": "authority:us-nc-dor",
+      "taxType": "SALES_TAX",
+      "services": [
+        "EQUIPMENT_SALE"
+      ],
+      "applies": [
+        {
+          "supply": "DOMESTIC",
+          "treatment": "CUSTOMER_CHARGE",
+          "responsibility": "seller-collects"
+        }
+      ],
+      "base": {
+        "kind": "LINE_NET"
+      },
+      "rounding": {
+        "mode": "HALF_UP",
+        "scale": 2,
+        "basis": "LINE"
+      },
+      "jurisdiction": "jurisdiction:us-nc-davidson-county",
+      "name": "Davidson County local sales tax on equipment (North Carolina)",
+      "emit": "US_NC_COUNTY_SALES_TAX",
+      "versions": [
+        {
+          "from": "2022-01-01",
+          "kind": "AD_VALOREM",
+          "rate": "0.0225",
+          "source": "SRC-ZOIKO-US-NC-COUNTY-2026",
+          "citation": "Davidson County local sales and use tax 2.25% on retail sales of tangible personal property sourced to the county, on top of the 4.75% State rate. NCDOR total general State, local and transit rates (historical table; current table effective July 1, 2026). Not applied to telecommunications service, which bears the 7% combined general rate collected by the State. https://www.ncdor.gov/taxes-forms/sales-and-use-tax/sales-and-use-tax-rates/historical-total-general-state-local-and-transit-sales-and-use-tax-rates"
+        }
+      ]
+    },
+    {
+      "id": "us-nc-davie-county.local-goods",
+      "regime": "regime:us-state-taxes",
+      "authority": "authority:us-nc-dor",
+      "taxType": "SALES_TAX",
+      "services": [
+        "EQUIPMENT_SALE"
+      ],
+      "applies": [
+        {
+          "supply": "DOMESTIC",
+          "treatment": "CUSTOMER_CHARGE",
+          "responsibility": "seller-collects"
+        }
+      ],
+      "base": {
+        "kind": "LINE_NET"
+      },
+      "rounding": {
+        "mode": "HALF_UP",
+        "scale": 2,
+        "basis": "LINE"
+      },
+      "jurisdiction": "jurisdiction:us-nc-davie-county",
+      "name": "Davie County local sales tax on equipment (North Carolina)",
+      "emit": "US_NC_COUNTY_SALES_TAX",
+      "versions": [
+        {
+          "from": "2022-01-01",
+          "kind": "AD_VALOREM",
+          "rate": "0.02",
+          "source": "SRC-ZOIKO-US-NC-COUNTY-2026",
+          "citation": "Davie County local sales and use tax 2.00% on retail sales of tangible personal property sourced to the county, on top of the 4.75% State rate. NCDOR total general State, local and transit rates (historical table; current table effective July 1, 2026). Not applied to telecommunications service, which bears the 7% combined general rate collected by the State. https://www.ncdor.gov/taxes-forms/sales-and-use-tax/sales-and-use-tax-rates/historical-total-general-state-local-and-transit-sales-and-use-tax-rates"
+        }
+      ]
+    },
+    {
+      "id": "us-nc-duplin-county.local-goods",
+      "regime": "regime:us-state-taxes",
+      "authority": "authority:us-nc-dor",
+      "taxType": "SALES_TAX",
+      "services": [
+        "EQUIPMENT_SALE"
+      ],
+      "applies": [
+        {
+          "supply": "DOMESTIC",
+          "treatment": "CUSTOMER_CHARGE",
+          "responsibility": "seller-collects"
+        }
+      ],
+      "base": {
+        "kind": "LINE_NET"
+      },
+      "rounding": {
+        "mode": "HALF_UP",
+        "scale": 2,
+        "basis": "LINE"
+      },
+      "jurisdiction": "jurisdiction:us-nc-duplin-county",
+      "name": "Duplin County local sales tax on equipment (North Carolina)",
+      "emit": "US_NC_COUNTY_SALES_TAX",
+      "versions": [
+        {
+          "from": "2022-01-01",
+          "kind": "AD_VALOREM",
+          "rate": "0.0225",
+          "source": "SRC-ZOIKO-US-NC-COUNTY-2026",
+          "citation": "Duplin County local sales and use tax 2.25% on retail sales of tangible personal property sourced to the county, on top of the 4.75% State rate. NCDOR total general State, local and transit rates (historical table; current table effective July 1, 2026). Not applied to telecommunications service, which bears the 7% combined general rate collected by the State. https://www.ncdor.gov/taxes-forms/sales-and-use-tax/sales-and-use-tax-rates/historical-total-general-state-local-and-transit-sales-and-use-tax-rates"
+        }
+      ]
+    },
+    {
+      "id": "us-nc-durham-county.local-goods",
+      "regime": "regime:us-state-taxes",
+      "authority": "authority:us-nc-dor",
+      "taxType": "SALES_TAX",
+      "services": [
+        "EQUIPMENT_SALE"
+      ],
+      "applies": [
+        {
+          "supply": "DOMESTIC",
+          "treatment": "CUSTOMER_CHARGE",
+          "responsibility": "seller-collects"
+        }
+      ],
+      "base": {
+        "kind": "LINE_NET"
+      },
+      "rounding": {
+        "mode": "HALF_UP",
+        "scale": 2,
+        "basis": "LINE"
+      },
+      "jurisdiction": "jurisdiction:us-nc-durham-county",
+      "name": "Durham County local sales tax on equipment (North Carolina)",
+      "emit": "US_NC_COUNTY_SALES_TAX",
+      "versions": [
+        {
+          "from": "2022-01-01",
+          "kind": "AD_VALOREM",
+          "rate": "0.0225",
+          "source": "SRC-ZOIKO-US-NC-COUNTY-2026",
+          "citation": "Durham County local sales and use tax 2.25% on retail sales of tangible personal property sourced to the county, on top of the 4.75% State rate; the county's 0.50% transit tax is a separate component. NCDOR total general State, local and transit rates (historical table; current table effective July 1, 2026). Not applied to telecommunications service, which bears the 7% combined general rate collected by the State. https://www.ncdor.gov/taxes-forms/sales-and-use-tax/sales-and-use-tax-rates/historical-total-general-state-local-and-transit-sales-and-use-tax-rates"
+        }
+      ]
+    },
+    {
+      "id": "us-nc-durham-county.transit-goods",
+      "regime": "regime:us-state-taxes",
+      "authority": "authority:us-nc-dor",
+      "taxType": "SALES_TAX",
+      "services": [
+        "EQUIPMENT_SALE"
+      ],
+      "applies": [
+        {
+          "supply": "DOMESTIC",
+          "treatment": "CUSTOMER_CHARGE",
+          "responsibility": "seller-collects"
+        }
+      ],
+      "base": {
+        "kind": "LINE_NET"
+      },
+      "rounding": {
+        "mode": "HALF_UP",
+        "scale": 2,
+        "basis": "LINE"
+      },
+      "jurisdiction": "jurisdiction:us-nc-durham-county",
+      "name": "Durham County transit sales tax on equipment (North Carolina)",
+      "emit": "US_NC_COUNTY_TRANSIT_TAX",
+      "versions": [
+        {
+          "from": "2022-01-01",
+          "kind": "AD_VALOREM",
+          "rate": "0.005",
+          "source": "SRC-ZOIKO-US-NC-COUNTY-2026",
+          "citation": "Durham County 0.50% transit sales and use tax on retail sales of tangible personal property sourced to the county; unchanged in every period of the NCDOR historical rate table (January 1, 2022 onward). https://www.ncdor.gov/taxes-forms/sales-and-use-tax/sales-and-use-tax-rates/historical-total-general-state-local-and-transit-sales-and-use-tax-rates"
+        }
+      ]
+    },
+    {
+      "id": "us-nc-edgecombe-county.local-goods",
+      "regime": "regime:us-state-taxes",
+      "authority": "authority:us-nc-dor",
+      "taxType": "SALES_TAX",
+      "services": [
+        "EQUIPMENT_SALE"
+      ],
+      "applies": [
+        {
+          "supply": "DOMESTIC",
+          "treatment": "CUSTOMER_CHARGE",
+          "responsibility": "seller-collects"
+        }
+      ],
+      "base": {
+        "kind": "LINE_NET"
+      },
+      "rounding": {
+        "mode": "HALF_UP",
+        "scale": 2,
+        "basis": "LINE"
+      },
+      "jurisdiction": "jurisdiction:us-nc-edgecombe-county",
+      "name": "Edgecombe County local sales tax on equipment (North Carolina)",
+      "emit": "US_NC_COUNTY_SALES_TAX",
+      "versions": [
+        {
+          "from": "2022-01-01",
+          "kind": "AD_VALOREM",
+          "rate": "0.0225",
+          "source": "SRC-ZOIKO-US-NC-COUNTY-2026",
+          "citation": "Edgecombe County local sales and use tax 2.25% on retail sales of tangible personal property sourced to the county, on top of the 4.75% State rate. NCDOR total general State, local and transit rates (historical table; current table effective July 1, 2026). Not applied to telecommunications service, which bears the 7% combined general rate collected by the State. https://www.ncdor.gov/taxes-forms/sales-and-use-tax/sales-and-use-tax-rates/historical-total-general-state-local-and-transit-sales-and-use-tax-rates"
+        }
+      ]
+    },
+    {
+      "id": "us-nc-forsyth-county.local-goods",
+      "regime": "regime:us-state-taxes",
+      "authority": "authority:us-nc-dor",
+      "taxType": "SALES_TAX",
+      "services": [
+        "EQUIPMENT_SALE"
+      ],
+      "applies": [
+        {
+          "supply": "DOMESTIC",
+          "treatment": "CUSTOMER_CHARGE",
+          "responsibility": "seller-collects"
+        }
+      ],
+      "base": {
+        "kind": "LINE_NET"
+      },
+      "rounding": {
+        "mode": "HALF_UP",
+        "scale": 2,
+        "basis": "LINE"
+      },
+      "jurisdiction": "jurisdiction:us-nc-forsyth-county",
+      "name": "Forsyth County local sales tax on equipment (North Carolina)",
+      "emit": "US_NC_COUNTY_SALES_TAX",
+      "versions": [
+        {
+          "from": "2022-01-01",
+          "kind": "AD_VALOREM",
+          "rate": "0.0225",
+          "source": "SRC-ZOIKO-US-NC-COUNTY-2026",
+          "citation": "Forsyth County local sales and use tax 2.25% on retail sales of tangible personal property sourced to the county, on top of the 4.75% State rate. NCDOR total general State, local and transit rates (historical table; current table effective July 1, 2026). Not applied to telecommunications service, which bears the 7% combined general rate collected by the State. https://www.ncdor.gov/taxes-forms/sales-and-use-tax/sales-and-use-tax-rates/historical-total-general-state-local-and-transit-sales-and-use-tax-rates"
+        }
+      ]
+    },
+    {
+      "id": "us-nc-franklin-county.local-goods",
+      "regime": "regime:us-state-taxes",
+      "authority": "authority:us-nc-dor",
+      "taxType": "SALES_TAX",
+      "services": [
+        "EQUIPMENT_SALE"
+      ],
+      "applies": [
+        {
+          "supply": "DOMESTIC",
+          "treatment": "CUSTOMER_CHARGE",
+          "responsibility": "seller-collects"
+        }
+      ],
+      "base": {
+        "kind": "LINE_NET"
+      },
+      "rounding": {
+        "mode": "HALF_UP",
+        "scale": 2,
+        "basis": "LINE"
+      },
+      "jurisdiction": "jurisdiction:us-nc-franklin-county",
+      "name": "Franklin County local sales tax on equipment (North Carolina)",
+      "emit": "US_NC_COUNTY_SALES_TAX",
+      "versions": [
+        {
+          "from": "2022-01-01",
+          "kind": "AD_VALOREM",
+          "rate": "0.02",
+          "source": "SRC-ZOIKO-US-NC-COUNTY-2026",
+          "citation": "Franklin County local sales and use tax 2.00% on retail sales of tangible personal property sourced to the county, on top of the 4.75% State rate. NCDOR total general State, local and transit rates (historical table; current table effective July 1, 2026). Not applied to telecommunications service, which bears the 7% combined general rate collected by the State. https://www.ncdor.gov/taxes-forms/sales-and-use-tax/sales-and-use-tax-rates/historical-total-general-state-local-and-transit-sales-and-use-tax-rates"
+        }
+      ]
+    },
+    {
+      "id": "us-nc-gaston-county.local-goods",
+      "regime": "regime:us-state-taxes",
+      "authority": "authority:us-nc-dor",
+      "taxType": "SALES_TAX",
+      "services": [
+        "EQUIPMENT_SALE"
+      ],
+      "applies": [
+        {
+          "supply": "DOMESTIC",
+          "treatment": "CUSTOMER_CHARGE",
+          "responsibility": "seller-collects"
+        }
+      ],
+      "base": {
+        "kind": "LINE_NET"
+      },
+      "rounding": {
+        "mode": "HALF_UP",
+        "scale": 2,
+        "basis": "LINE"
+      },
+      "jurisdiction": "jurisdiction:us-nc-gaston-county",
+      "name": "Gaston County local sales tax on equipment (North Carolina)",
+      "emit": "US_NC_COUNTY_SALES_TAX",
+      "versions": [
+        {
+          "from": "2022-01-01",
+          "kind": "AD_VALOREM",
+          "rate": "0.0225",
+          "source": "SRC-ZOIKO-US-NC-COUNTY-2026",
+          "citation": "Gaston County local sales and use tax 2.25% on retail sales of tangible personal property sourced to the county, on top of the 4.75% State rate. NCDOR total general State, local and transit rates (historical table; current table effective July 1, 2026). Not applied to telecommunications service, which bears the 7% combined general rate collected by the State. https://www.ncdor.gov/taxes-forms/sales-and-use-tax/sales-and-use-tax-rates/historical-total-general-state-local-and-transit-sales-and-use-tax-rates"
+        }
+      ]
+    },
+    {
+      "id": "us-nc-gates-county.local-goods",
+      "regime": "regime:us-state-taxes",
+      "authority": "authority:us-nc-dor",
+      "taxType": "SALES_TAX",
+      "services": [
+        "EQUIPMENT_SALE"
+      ],
+      "applies": [
+        {
+          "supply": "DOMESTIC",
+          "treatment": "CUSTOMER_CHARGE",
+          "responsibility": "seller-collects"
+        }
+      ],
+      "base": {
+        "kind": "LINE_NET"
+      },
+      "rounding": {
+        "mode": "HALF_UP",
+        "scale": 2,
+        "basis": "LINE"
+      },
+      "jurisdiction": "jurisdiction:us-nc-gates-county",
+      "name": "Gates County local sales tax on equipment (North Carolina)",
+      "emit": "US_NC_COUNTY_SALES_TAX",
+      "versions": [
+        {
+          "from": "2022-01-01",
+          "kind": "AD_VALOREM",
+          "rate": "0.02",
+          "source": "SRC-ZOIKO-US-NC-COUNTY-2026",
+          "citation": "Gates County local sales and use tax 2.00% on retail sales of tangible personal property sourced to the county, on top of the 4.75% State rate. NCDOR total general State, local and transit rates (historical table; current table effective July 1, 2026). Not applied to telecommunications service, which bears the 7% combined general rate collected by the State. https://www.ncdor.gov/taxes-forms/sales-and-use-tax/sales-and-use-tax-rates/historical-total-general-state-local-and-transit-sales-and-use-tax-rates"
+        }
+      ]
+    },
+    {
+      "id": "us-nc-graham-county.local-goods",
+      "regime": "regime:us-state-taxes",
+      "authority": "authority:us-nc-dor",
+      "taxType": "SALES_TAX",
+      "services": [
+        "EQUIPMENT_SALE"
+      ],
+      "applies": [
+        {
+          "supply": "DOMESTIC",
+          "treatment": "CUSTOMER_CHARGE",
+          "responsibility": "seller-collects"
+        }
+      ],
+      "base": {
+        "kind": "LINE_NET"
+      },
+      "rounding": {
+        "mode": "HALF_UP",
+        "scale": 2,
+        "basis": "LINE"
+      },
+      "jurisdiction": "jurisdiction:us-nc-graham-county",
+      "name": "Graham County local sales tax on equipment (North Carolina)",
+      "emit": "US_NC_COUNTY_SALES_TAX",
+      "versions": [
+        {
+          "from": "2022-01-01",
+          "kind": "AD_VALOREM",
+          "rate": "0.0225",
+          "source": "SRC-ZOIKO-US-NC-COUNTY-2026",
+          "citation": "Graham County local sales and use tax 2.25% on retail sales of tangible personal property sourced to the county, on top of the 4.75% State rate. NCDOR total general State, local and transit rates (historical table; current table effective July 1, 2026). Not applied to telecommunications service, which bears the 7% combined general rate collected by the State. https://www.ncdor.gov/taxes-forms/sales-and-use-tax/sales-and-use-tax-rates/historical-total-general-state-local-and-transit-sales-and-use-tax-rates"
+        }
+      ]
+    },
+    {
+      "id": "us-nc-granville-county.local-goods",
+      "regime": "regime:us-state-taxes",
+      "authority": "authority:us-nc-dor",
+      "taxType": "SALES_TAX",
+      "services": [
+        "EQUIPMENT_SALE"
+      ],
+      "applies": [
+        {
+          "supply": "DOMESTIC",
+          "treatment": "CUSTOMER_CHARGE",
+          "responsibility": "seller-collects"
+        }
+      ],
+      "base": {
+        "kind": "LINE_NET"
+      },
+      "rounding": {
+        "mode": "HALF_UP",
+        "scale": 2,
+        "basis": "LINE"
+      },
+      "jurisdiction": "jurisdiction:us-nc-granville-county",
+      "name": "Granville County local sales tax on equipment (North Carolina)",
+      "emit": "US_NC_COUNTY_SALES_TAX",
+      "versions": [
+        {
+          "from": "2022-01-01",
+          "kind": "AD_VALOREM",
+          "rate": "0.02",
+          "source": "SRC-ZOIKO-US-NC-COUNTY-2026",
+          "citation": "Granville County local sales and use tax 2.00% on retail sales of tangible personal property sourced to the county, on top of the 4.75% State rate. NCDOR total general State, local and transit rates (historical table; current table effective July 1, 2026). Not applied to telecommunications service, which bears the 7% combined general rate collected by the State. https://www.ncdor.gov/taxes-forms/sales-and-use-tax/sales-and-use-tax-rates/historical-total-general-state-local-and-transit-sales-and-use-tax-rates"
+        }
+      ]
+    },
+    {
+      "id": "us-nc-greene-county.local-goods",
+      "regime": "regime:us-state-taxes",
+      "authority": "authority:us-nc-dor",
+      "taxType": "SALES_TAX",
+      "services": [
+        "EQUIPMENT_SALE"
+      ],
+      "applies": [
+        {
+          "supply": "DOMESTIC",
+          "treatment": "CUSTOMER_CHARGE",
+          "responsibility": "seller-collects"
+        }
+      ],
+      "base": {
+        "kind": "LINE_NET"
+      },
+      "rounding": {
+        "mode": "HALF_UP",
+        "scale": 2,
+        "basis": "LINE"
+      },
+      "jurisdiction": "jurisdiction:us-nc-greene-county",
+      "name": "Greene County local sales tax on equipment (North Carolina)",
+      "emit": "US_NC_COUNTY_SALES_TAX",
+      "versions": [
+        {
+          "from": "2022-01-01",
+          "kind": "AD_VALOREM",
+          "rate": "0.0225",
+          "source": "SRC-ZOIKO-US-NC-COUNTY-2026",
+          "citation": "Greene County local sales and use tax 2.25% on retail sales of tangible personal property sourced to the county, on top of the 4.75% State rate. NCDOR total general State, local and transit rates (historical table; current table effective July 1, 2026). Not applied to telecommunications service, which bears the 7% combined general rate collected by the State. https://www.ncdor.gov/taxes-forms/sales-and-use-tax/sales-and-use-tax-rates/historical-total-general-state-local-and-transit-sales-and-use-tax-rates"
+        }
+      ]
+    },
+    {
+      "id": "us-nc-guilford-county.local-goods",
+      "regime": "regime:us-state-taxes",
+      "authority": "authority:us-nc-dor",
+      "taxType": "SALES_TAX",
+      "services": [
+        "EQUIPMENT_SALE"
+      ],
+      "applies": [
+        {
+          "supply": "DOMESTIC",
+          "treatment": "CUSTOMER_CHARGE",
+          "responsibility": "seller-collects"
+        }
+      ],
+      "base": {
+        "kind": "LINE_NET"
+      },
+      "rounding": {
+        "mode": "HALF_UP",
+        "scale": 2,
+        "basis": "LINE"
+      },
+      "jurisdiction": "jurisdiction:us-nc-guilford-county",
+      "name": "Guilford County local sales tax on equipment (North Carolina)",
+      "emit": "US_NC_COUNTY_SALES_TAX",
+      "versions": [
+        {
+          "from": "2022-01-01",
+          "kind": "AD_VALOREM",
+          "rate": "0.02",
+          "source": "SRC-ZOIKO-US-NC-COUNTY-2026",
+          "citation": "Guilford County local sales and use tax 2.00% on retail sales of tangible personal property sourced to the county, on top of the 4.75% State rate. NCDOR total general State, local and transit rates (historical table; current table effective July 1, 2026). Not applied to telecommunications service, which bears the 7% combined general rate collected by the State. https://www.ncdor.gov/taxes-forms/sales-and-use-tax/sales-and-use-tax-rates/historical-total-general-state-local-and-transit-sales-and-use-tax-rates"
+        }
+      ]
+    },
+    {
+      "id": "us-nc-halifax-county.local-goods",
+      "regime": "regime:us-state-taxes",
+      "authority": "authority:us-nc-dor",
+      "taxType": "SALES_TAX",
+      "services": [
+        "EQUIPMENT_SALE"
+      ],
+      "applies": [
+        {
+          "supply": "DOMESTIC",
+          "treatment": "CUSTOMER_CHARGE",
+          "responsibility": "seller-collects"
+        }
+      ],
+      "base": {
+        "kind": "LINE_NET"
+      },
+      "rounding": {
+        "mode": "HALF_UP",
+        "scale": 2,
+        "basis": "LINE"
+      },
+      "jurisdiction": "jurisdiction:us-nc-halifax-county",
+      "name": "Halifax County local sales tax on equipment (North Carolina)",
+      "emit": "US_NC_COUNTY_SALES_TAX",
+      "versions": [
+        {
+          "from": "2022-01-01",
+          "kind": "AD_VALOREM",
+          "rate": "0.0225",
+          "source": "SRC-ZOIKO-US-NC-COUNTY-2026",
+          "citation": "Halifax County local sales and use tax 2.25% on retail sales of tangible personal property sourced to the county, on top of the 4.75% State rate. NCDOR total general State, local and transit rates (historical table; current table effective July 1, 2026). Not applied to telecommunications service, which bears the 7% combined general rate collected by the State. https://www.ncdor.gov/taxes-forms/sales-and-use-tax/sales-and-use-tax-rates/historical-total-general-state-local-and-transit-sales-and-use-tax-rates"
+        }
+      ]
+    },
+    {
+      "id": "us-nc-harnett-county.local-goods",
+      "regime": "regime:us-state-taxes",
+      "authority": "authority:us-nc-dor",
+      "taxType": "SALES_TAX",
+      "services": [
+        "EQUIPMENT_SALE"
+      ],
+      "applies": [
+        {
+          "supply": "DOMESTIC",
+          "treatment": "CUSTOMER_CHARGE",
+          "responsibility": "seller-collects"
+        }
+      ],
+      "base": {
+        "kind": "LINE_NET"
+      },
+      "rounding": {
+        "mode": "HALF_UP",
+        "scale": 2,
+        "basis": "LINE"
+      },
+      "jurisdiction": "jurisdiction:us-nc-harnett-county",
+      "name": "Harnett County local sales tax on equipment (North Carolina)",
+      "emit": "US_NC_COUNTY_SALES_TAX",
+      "versions": [
+        {
+          "from": "2022-01-01",
+          "kind": "AD_VALOREM",
+          "rate": "0.0225",
+          "source": "SRC-ZOIKO-US-NC-COUNTY-2026",
+          "citation": "Harnett County local sales and use tax 2.25% on retail sales of tangible personal property sourced to the county, on top of the 4.75% State rate. NCDOR total general State, local and transit rates (historical table; current table effective July 1, 2026). Not applied to telecommunications service, which bears the 7% combined general rate collected by the State. https://www.ncdor.gov/taxes-forms/sales-and-use-tax/sales-and-use-tax-rates/historical-total-general-state-local-and-transit-sales-and-use-tax-rates"
+        }
+      ]
+    },
+    {
+      "id": "us-nc-haywood-county.local-goods",
+      "regime": "regime:us-state-taxes",
+      "authority": "authority:us-nc-dor",
+      "taxType": "SALES_TAX",
+      "services": [
+        "EQUIPMENT_SALE"
+      ],
+      "applies": [
+        {
+          "supply": "DOMESTIC",
+          "treatment": "CUSTOMER_CHARGE",
+          "responsibility": "seller-collects"
+        }
+      ],
+      "base": {
+        "kind": "LINE_NET"
+      },
+      "rounding": {
+        "mode": "HALF_UP",
+        "scale": 2,
+        "basis": "LINE"
+      },
+      "jurisdiction": "jurisdiction:us-nc-haywood-county",
+      "name": "Haywood County local sales tax on equipment (North Carolina)",
+      "emit": "US_NC_COUNTY_SALES_TAX",
+      "versions": [
+        {
+          "from": "2022-01-01",
+          "kind": "AD_VALOREM",
+          "rate": "0.0225",
+          "source": "SRC-ZOIKO-US-NC-COUNTY-2026",
+          "citation": "Haywood County local sales and use tax 2.25% on retail sales of tangible personal property sourced to the county, on top of the 4.75% State rate. NCDOR total general State, local and transit rates (historical table; current table effective July 1, 2026). Not applied to telecommunications service, which bears the 7% combined general rate collected by the State. https://www.ncdor.gov/taxes-forms/sales-and-use-tax/sales-and-use-tax-rates/historical-total-general-state-local-and-transit-sales-and-use-tax-rates"
+        }
+      ]
+    },
+    {
+      "id": "us-nc-henderson-county.local-goods",
+      "regime": "regime:us-state-taxes",
+      "authority": "authority:us-nc-dor",
+      "taxType": "SALES_TAX",
+      "services": [
+        "EQUIPMENT_SALE"
+      ],
+      "applies": [
+        {
+          "supply": "DOMESTIC",
+          "treatment": "CUSTOMER_CHARGE",
+          "responsibility": "seller-collects"
+        }
+      ],
+      "base": {
+        "kind": "LINE_NET"
+      },
+      "rounding": {
+        "mode": "HALF_UP",
+        "scale": 2,
+        "basis": "LINE"
+      },
+      "jurisdiction": "jurisdiction:us-nc-henderson-county",
+      "name": "Henderson County local sales tax on equipment (North Carolina)",
+      "emit": "US_NC_COUNTY_SALES_TAX",
+      "versions": [
+        {
+          "from": "2022-01-01",
+          "kind": "AD_VALOREM",
+          "rate": "0.02",
+          "source": "SRC-ZOIKO-US-NC-COUNTY-2026",
+          "citation": "Henderson County local sales and use tax 2.00% on retail sales of tangible personal property sourced to the county, on top of the 4.75% State rate. NCDOR total general State, local and transit rates (historical table; current table effective July 1, 2026). Not applied to telecommunications service, which bears the 7% combined general rate collected by the State. https://www.ncdor.gov/taxes-forms/sales-and-use-tax/sales-and-use-tax-rates/historical-total-general-state-local-and-transit-sales-and-use-tax-rates"
+        }
+      ]
+    },
+    {
+      "id": "us-nc-hertford-county.local-goods",
+      "regime": "regime:us-state-taxes",
+      "authority": "authority:us-nc-dor",
+      "taxType": "SALES_TAX",
+      "services": [
+        "EQUIPMENT_SALE"
+      ],
+      "applies": [
+        {
+          "supply": "DOMESTIC",
+          "treatment": "CUSTOMER_CHARGE",
+          "responsibility": "seller-collects"
+        }
+      ],
+      "base": {
+        "kind": "LINE_NET"
+      },
+      "rounding": {
+        "mode": "HALF_UP",
+        "scale": 2,
+        "basis": "LINE"
+      },
+      "jurisdiction": "jurisdiction:us-nc-hertford-county",
+      "name": "Hertford County local sales tax on equipment (North Carolina)",
+      "emit": "US_NC_COUNTY_SALES_TAX",
+      "versions": [
+        {
+          "from": "2022-01-01",
+          "kind": "AD_VALOREM",
+          "rate": "0.0225",
+          "source": "SRC-ZOIKO-US-NC-COUNTY-2026",
+          "citation": "Hertford County local sales and use tax 2.25% on retail sales of tangible personal property sourced to the county, on top of the 4.75% State rate. NCDOR total general State, local and transit rates (historical table; current table effective July 1, 2026). Not applied to telecommunications service, which bears the 7% combined general rate collected by the State. https://www.ncdor.gov/taxes-forms/sales-and-use-tax/sales-and-use-tax-rates/historical-total-general-state-local-and-transit-sales-and-use-tax-rates"
+        }
+      ]
+    },
+    {
+      "id": "us-nc-hoke-county.local-goods",
+      "regime": "regime:us-state-taxes",
+      "authority": "authority:us-nc-dor",
+      "taxType": "SALES_TAX",
+      "services": [
+        "EQUIPMENT_SALE"
+      ],
+      "applies": [
+        {
+          "supply": "DOMESTIC",
+          "treatment": "CUSTOMER_CHARGE",
+          "responsibility": "seller-collects"
+        }
+      ],
+      "base": {
+        "kind": "LINE_NET"
+      },
+      "rounding": {
+        "mode": "HALF_UP",
+        "scale": 2,
+        "basis": "LINE"
+      },
+      "jurisdiction": "jurisdiction:us-nc-hoke-county",
+      "name": "Hoke County local sales tax on equipment (North Carolina)",
+      "emit": "US_NC_COUNTY_SALES_TAX",
+      "versions": [
+        {
+          "from": "2022-01-01",
+          "kind": "AD_VALOREM",
+          "rate": "0.02",
+          "source": "SRC-ZOIKO-US-NC-COUNTY-2026",
+          "citation": "Hoke County local sales and use tax 2.00% on retail sales of tangible personal property sourced to the county, on top of the 4.75% State rate. NCDOR total general State, local and transit rates (historical table; current table effective July 1, 2026). Not applied to telecommunications service, which bears the 7% combined general rate collected by the State. https://www.ncdor.gov/taxes-forms/sales-and-use-tax/sales-and-use-tax-rates/historical-total-general-state-local-and-transit-sales-and-use-tax-rates"
+        }
+      ]
+    },
+    {
+      "id": "us-nc-hyde-county.local-goods",
+      "regime": "regime:us-state-taxes",
+      "authority": "authority:us-nc-dor",
+      "taxType": "SALES_TAX",
+      "services": [
+        "EQUIPMENT_SALE"
+      ],
+      "applies": [
+        {
+          "supply": "DOMESTIC",
+          "treatment": "CUSTOMER_CHARGE",
+          "responsibility": "seller-collects"
+        }
+      ],
+      "base": {
+        "kind": "LINE_NET"
+      },
+      "rounding": {
+        "mode": "HALF_UP",
+        "scale": 2,
+        "basis": "LINE"
+      },
+      "jurisdiction": "jurisdiction:us-nc-hyde-county",
+      "name": "Hyde County local sales tax on equipment (North Carolina)",
+      "emit": "US_NC_COUNTY_SALES_TAX",
+      "versions": [
+        {
+          "from": "2022-01-01",
+          "kind": "AD_VALOREM",
+          "rate": "0.02",
+          "source": "SRC-ZOIKO-US-NC-COUNTY-2026",
+          "citation": "Hyde County local sales and use tax 2.00% on retail sales of tangible personal property sourced to the county, on top of the 4.75% State rate. NCDOR total general State, local and transit rates (historical table; current table effective July 1, 2026). Not applied to telecommunications service, which bears the 7% combined general rate collected by the State. https://www.ncdor.gov/taxes-forms/sales-and-use-tax/sales-and-use-tax-rates/historical-total-general-state-local-and-transit-sales-and-use-tax-rates"
+        }
+      ]
+    },
+    {
+      "id": "us-nc-iredell-county.local-goods",
+      "regime": "regime:us-state-taxes",
+      "authority": "authority:us-nc-dor",
+      "taxType": "SALES_TAX",
+      "services": [
+        "EQUIPMENT_SALE"
+      ],
+      "applies": [
+        {
+          "supply": "DOMESTIC",
+          "treatment": "CUSTOMER_CHARGE",
+          "responsibility": "seller-collects"
+        }
+      ],
+      "base": {
+        "kind": "LINE_NET"
+      },
+      "rounding": {
+        "mode": "HALF_UP",
+        "scale": 2,
+        "basis": "LINE"
+      },
+      "jurisdiction": "jurisdiction:us-nc-iredell-county",
+      "name": "Iredell County local sales tax on equipment (North Carolina)",
+      "emit": "US_NC_COUNTY_SALES_TAX",
+      "versions": [
+        {
+          "from": "2022-01-01",
+          "kind": "AD_VALOREM",
+          "rate": "0.02",
+          "source": "SRC-ZOIKO-US-NC-COUNTY-2026",
+          "citation": "Iredell County local sales and use tax 2.00% on retail sales of tangible personal property sourced to the county, on top of the 4.75% State rate. NCDOR total general State, local and transit rates (historical table; current table effective July 1, 2026). Not applied to telecommunications service, which bears the 7% combined general rate collected by the State. https://www.ncdor.gov/taxes-forms/sales-and-use-tax/sales-and-use-tax-rates/historical-total-general-state-local-and-transit-sales-and-use-tax-rates"
+        }
+      ]
+    },
+    {
+      "id": "us-nc-jackson-county.local-goods",
+      "regime": "regime:us-state-taxes",
+      "authority": "authority:us-nc-dor",
+      "taxType": "SALES_TAX",
+      "services": [
+        "EQUIPMENT_SALE"
+      ],
+      "applies": [
+        {
+          "supply": "DOMESTIC",
+          "treatment": "CUSTOMER_CHARGE",
+          "responsibility": "seller-collects"
+        }
+      ],
+      "base": {
+        "kind": "LINE_NET"
+      },
+      "rounding": {
+        "mode": "HALF_UP",
+        "scale": 2,
+        "basis": "LINE"
+      },
+      "jurisdiction": "jurisdiction:us-nc-jackson-county",
+      "name": "Jackson County local sales tax on equipment (North Carolina)",
+      "emit": "US_NC_COUNTY_SALES_TAX",
+      "versions": [
+        {
+          "from": "2022-01-01",
+          "kind": "AD_VALOREM",
+          "rate": "0.0225",
+          "source": "SRC-ZOIKO-US-NC-COUNTY-2026",
+          "citation": "Jackson County local sales and use tax 2.25% on retail sales of tangible personal property sourced to the county, on top of the 4.75% State rate. NCDOR total general State, local and transit rates (historical table; current table effective July 1, 2026). Not applied to telecommunications service, which bears the 7% combined general rate collected by the State. https://www.ncdor.gov/taxes-forms/sales-and-use-tax/sales-and-use-tax-rates/historical-total-general-state-local-and-transit-sales-and-use-tax-rates"
+        }
+      ]
+    },
+    {
+      "id": "us-nc-johnston-county.local-goods",
+      "regime": "regime:us-state-taxes",
+      "authority": "authority:us-nc-dor",
+      "taxType": "SALES_TAX",
+      "services": [
+        "EQUIPMENT_SALE"
+      ],
+      "applies": [
+        {
+          "supply": "DOMESTIC",
+          "treatment": "CUSTOMER_CHARGE",
+          "responsibility": "seller-collects"
+        }
+      ],
+      "base": {
+        "kind": "LINE_NET"
+      },
+      "rounding": {
+        "mode": "HALF_UP",
+        "scale": 2,
+        "basis": "LINE"
+      },
+      "jurisdiction": "jurisdiction:us-nc-johnston-county",
+      "name": "Johnston County local sales tax on equipment (North Carolina)",
+      "emit": "US_NC_COUNTY_SALES_TAX",
+      "versions": [
+        {
+          "from": "2022-01-01",
+          "kind": "AD_VALOREM",
+          "rate": "0.02",
+          "source": "SRC-ZOIKO-US-NC-COUNTY-2026",
+          "citation": "Johnston County local sales and use tax 2.00% on retail sales of tangible personal property sourced to the county, on top of the 4.75% State rate. NCDOR total general State, local and transit rates (historical table; current table effective July 1, 2026). Not applied to telecommunications service, which bears the 7% combined general rate collected by the State. https://www.ncdor.gov/taxes-forms/sales-and-use-tax/sales-and-use-tax-rates/historical-total-general-state-local-and-transit-sales-and-use-tax-rates"
+        }
+      ]
+    },
+    {
+      "id": "us-nc-jones-county.local-goods",
+      "regime": "regime:us-state-taxes",
+      "authority": "authority:us-nc-dor",
+      "taxType": "SALES_TAX",
+      "services": [
+        "EQUIPMENT_SALE"
+      ],
+      "applies": [
+        {
+          "supply": "DOMESTIC",
+          "treatment": "CUSTOMER_CHARGE",
+          "responsibility": "seller-collects"
+        }
+      ],
+      "base": {
+        "kind": "LINE_NET"
+      },
+      "rounding": {
+        "mode": "HALF_UP",
+        "scale": 2,
+        "basis": "LINE"
+      },
+      "jurisdiction": "jurisdiction:us-nc-jones-county",
+      "name": "Jones County local sales tax on equipment (North Carolina)",
+      "emit": "US_NC_COUNTY_SALES_TAX",
+      "versions": [
+        {
+          "from": "2022-01-01",
+          "kind": "AD_VALOREM",
+          "rate": "0.0225",
+          "source": "SRC-ZOIKO-US-NC-COUNTY-2026",
+          "citation": "Jones County local sales and use tax 2.25% on retail sales of tangible personal property sourced to the county, on top of the 4.75% State rate. NCDOR total general State, local and transit rates (historical table; current table effective July 1, 2026). Not applied to telecommunications service, which bears the 7% combined general rate collected by the State. https://www.ncdor.gov/taxes-forms/sales-and-use-tax/sales-and-use-tax-rates/historical-total-general-state-local-and-transit-sales-and-use-tax-rates"
+        }
+      ]
+    },
+    {
+      "id": "us-nc-lee-county.local-goods",
+      "regime": "regime:us-state-taxes",
+      "authority": "authority:us-nc-dor",
+      "taxType": "SALES_TAX",
+      "services": [
+        "EQUIPMENT_SALE"
+      ],
+      "applies": [
+        {
+          "supply": "DOMESTIC",
+          "treatment": "CUSTOMER_CHARGE",
+          "responsibility": "seller-collects"
+        }
+      ],
+      "base": {
+        "kind": "LINE_NET"
+      },
+      "rounding": {
+        "mode": "HALF_UP",
+        "scale": 2,
+        "basis": "LINE"
+      },
+      "jurisdiction": "jurisdiction:us-nc-lee-county",
+      "name": "Lee County local sales tax on equipment (North Carolina)",
+      "emit": "US_NC_COUNTY_SALES_TAX",
+      "versions": [
+        {
+          "from": "2022-01-01",
+          "kind": "AD_VALOREM",
+          "rate": "0.0225",
+          "source": "SRC-ZOIKO-US-NC-COUNTY-2026",
+          "citation": "Lee County local sales and use tax 2.25% on retail sales of tangible personal property sourced to the county, on top of the 4.75% State rate. NCDOR total general State, local and transit rates (historical table; current table effective July 1, 2026). Not applied to telecommunications service, which bears the 7% combined general rate collected by the State. https://www.ncdor.gov/taxes-forms/sales-and-use-tax/sales-and-use-tax-rates/historical-total-general-state-local-and-transit-sales-and-use-tax-rates"
+        }
+      ]
+    },
+    {
+      "id": "us-nc-lenoir-county.local-goods",
+      "regime": "regime:us-state-taxes",
+      "authority": "authority:us-nc-dor",
+      "taxType": "SALES_TAX",
+      "services": [
+        "EQUIPMENT_SALE"
+      ],
+      "applies": [
+        {
+          "supply": "DOMESTIC",
+          "treatment": "CUSTOMER_CHARGE",
+          "responsibility": "seller-collects"
+        }
+      ],
+      "base": {
+        "kind": "LINE_NET"
+      },
+      "rounding": {
+        "mode": "HALF_UP",
+        "scale": 2,
+        "basis": "LINE"
+      },
+      "jurisdiction": "jurisdiction:us-nc-lenoir-county",
+      "name": "Lenoir County local sales tax on equipment (North Carolina)",
+      "emit": "US_NC_COUNTY_SALES_TAX",
+      "versions": [
+        {
+          "from": "2022-01-01",
+          "kind": "AD_VALOREM",
+          "rate": "0.02",
+          "source": "SRC-ZOIKO-US-NC-COUNTY-2026",
+          "citation": "Lenoir County local sales and use tax 2.00% on retail sales of tangible personal property sourced to the county, on top of the 4.75% State rate. NCDOR total general State, local and transit rates (historical table; current table effective July 1, 2026). Not applied to telecommunications service, which bears the 7% combined general rate collected by the State. https://www.ncdor.gov/taxes-forms/sales-and-use-tax/sales-and-use-tax-rates/historical-total-general-state-local-and-transit-sales-and-use-tax-rates"
+        }
+      ]
+    },
+    {
+      "id": "us-nc-lincoln-county.local-goods",
+      "regime": "regime:us-state-taxes",
+      "authority": "authority:us-nc-dor",
+      "taxType": "SALES_TAX",
+      "services": [
+        "EQUIPMENT_SALE"
+      ],
+      "applies": [
+        {
+          "supply": "DOMESTIC",
+          "treatment": "CUSTOMER_CHARGE",
+          "responsibility": "seller-collects"
+        }
+      ],
+      "base": {
+        "kind": "LINE_NET"
+      },
+      "rounding": {
+        "mode": "HALF_UP",
+        "scale": 2,
+        "basis": "LINE"
+      },
+      "jurisdiction": "jurisdiction:us-nc-lincoln-county",
+      "name": "Lincoln County local sales tax on equipment (North Carolina)",
+      "emit": "US_NC_COUNTY_SALES_TAX",
+      "versions": [
+        {
+          "from": "2022-01-01",
+          "kind": "AD_VALOREM",
+          "rate": "0.0225",
+          "source": "SRC-ZOIKO-US-NC-COUNTY-2026",
+          "citation": "Lincoln County local sales and use tax 2.25% on retail sales of tangible personal property sourced to the county, on top of the 4.75% State rate. NCDOR total general State, local and transit rates (historical table; current table effective July 1, 2026). Not applied to telecommunications service, which bears the 7% combined general rate collected by the State. https://www.ncdor.gov/taxes-forms/sales-and-use-tax/sales-and-use-tax-rates/historical-total-general-state-local-and-transit-sales-and-use-tax-rates"
+        }
+      ]
+    },
+    {
+      "id": "us-nc-macon-county.local-goods",
+      "regime": "regime:us-state-taxes",
+      "authority": "authority:us-nc-dor",
+      "taxType": "SALES_TAX",
+      "services": [
+        "EQUIPMENT_SALE"
+      ],
+      "applies": [
+        {
+          "supply": "DOMESTIC",
+          "treatment": "CUSTOMER_CHARGE",
+          "responsibility": "seller-collects"
+        }
+      ],
+      "base": {
+        "kind": "LINE_NET"
+      },
+      "rounding": {
+        "mode": "HALF_UP",
+        "scale": 2,
+        "basis": "LINE"
+      },
+      "jurisdiction": "jurisdiction:us-nc-macon-county",
+      "name": "Macon County local sales tax on equipment (North Carolina)",
+      "emit": "US_NC_COUNTY_SALES_TAX",
+      "versions": [
+        {
+          "from": "2022-01-01",
+          "kind": "AD_VALOREM",
+          "rate": "0.02",
+          "source": "SRC-ZOIKO-US-NC-COUNTY-2026",
+          "citation": "Macon County local sales and use tax 2.00% on retail sales of tangible personal property sourced to the county, on top of the 4.75% State rate. NCDOR total general State, local and transit rates (historical table; current table effective July 1, 2026). Not applied to telecommunications service, which bears the 7% combined general rate collected by the State. https://www.ncdor.gov/taxes-forms/sales-and-use-tax/sales-and-use-tax-rates/historical-total-general-state-local-and-transit-sales-and-use-tax-rates"
+        }
+      ]
+    },
+    {
+      "id": "us-nc-madison-county.local-goods",
+      "regime": "regime:us-state-taxes",
+      "authority": "authority:us-nc-dor",
+      "taxType": "SALES_TAX",
+      "services": [
+        "EQUIPMENT_SALE"
+      ],
+      "applies": [
+        {
+          "supply": "DOMESTIC",
+          "treatment": "CUSTOMER_CHARGE",
+          "responsibility": "seller-collects"
+        }
+      ],
+      "base": {
+        "kind": "LINE_NET"
+      },
+      "rounding": {
+        "mode": "HALF_UP",
+        "scale": 2,
+        "basis": "LINE"
+      },
+      "jurisdiction": "jurisdiction:us-nc-madison-county",
+      "name": "Madison County local sales tax on equipment (North Carolina)",
+      "emit": "US_NC_COUNTY_SALES_TAX",
+      "versions": [
+        {
+          "from": "2022-01-01",
+          "kind": "AD_VALOREM",
+          "rate": "0.0225",
+          "source": "SRC-ZOIKO-US-NC-COUNTY-2026",
+          "citation": "Madison County local sales and use tax 2.25% on retail sales of tangible personal property sourced to the county, on top of the 4.75% State rate. NCDOR total general State, local and transit rates (historical table; current table effective July 1, 2026). Not applied to telecommunications service, which bears the 7% combined general rate collected by the State. https://www.ncdor.gov/taxes-forms/sales-and-use-tax/sales-and-use-tax-rates/historical-total-general-state-local-and-transit-sales-and-use-tax-rates"
+        }
+      ]
+    },
+    {
+      "id": "us-nc-martin-county.local-goods",
+      "regime": "regime:us-state-taxes",
+      "authority": "authority:us-nc-dor",
+      "taxType": "SALES_TAX",
+      "services": [
+        "EQUIPMENT_SALE"
+      ],
+      "applies": [
+        {
+          "supply": "DOMESTIC",
+          "treatment": "CUSTOMER_CHARGE",
+          "responsibility": "seller-collects"
+        }
+      ],
+      "base": {
+        "kind": "LINE_NET"
+      },
+      "rounding": {
+        "mode": "HALF_UP",
+        "scale": 2,
+        "basis": "LINE"
+      },
+      "jurisdiction": "jurisdiction:us-nc-martin-county",
+      "name": "Martin County local sales tax on equipment (North Carolina)",
+      "emit": "US_NC_COUNTY_SALES_TAX",
+      "versions": [
+        {
+          "from": "2022-01-01",
+          "kind": "AD_VALOREM",
+          "rate": "0.0225",
+          "source": "SRC-ZOIKO-US-NC-COUNTY-2026",
+          "citation": "Martin County local sales and use tax 2.25% on retail sales of tangible personal property sourced to the county, on top of the 4.75% State rate. NCDOR total general State, local and transit rates (historical table; current table effective July 1, 2026). Not applied to telecommunications service, which bears the 7% combined general rate collected by the State. https://www.ncdor.gov/taxes-forms/sales-and-use-tax/sales-and-use-tax-rates/historical-total-general-state-local-and-transit-sales-and-use-tax-rates"
+        }
+      ]
+    },
+    {
+      "id": "us-nc-mcdowell-county.local-goods",
+      "regime": "regime:us-state-taxes",
+      "authority": "authority:us-nc-dor",
+      "taxType": "SALES_TAX",
+      "services": [
+        "EQUIPMENT_SALE"
+      ],
+      "applies": [
+        {
+          "supply": "DOMESTIC",
+          "treatment": "CUSTOMER_CHARGE",
+          "responsibility": "seller-collects"
+        }
+      ],
+      "base": {
+        "kind": "LINE_NET"
+      },
+      "rounding": {
+        "mode": "HALF_UP",
+        "scale": 2,
+        "basis": "LINE"
+      },
+      "jurisdiction": "jurisdiction:us-nc-mcdowell-county",
+      "name": "McDowell County local sales tax on equipment (North Carolina)",
+      "emit": "US_NC_COUNTY_SALES_TAX",
+      "versions": [
+        {
+          "from": "2022-01-01",
+          "kind": "AD_VALOREM",
+          "rate": "0.02",
+          "source": "SRC-ZOIKO-US-NC-COUNTY-2026",
+          "citation": "McDowell County local sales and use tax 2.00% on retail sales of tangible personal property sourced to the county, on top of the 4.75% State rate. NCDOR total general State, local and transit rates (historical table; current table effective July 1, 2026). Not applied to telecommunications service, which bears the 7% combined general rate collected by the State. https://www.ncdor.gov/taxes-forms/sales-and-use-tax/sales-and-use-tax-rates/historical-total-general-state-local-and-transit-sales-and-use-tax-rates"
+        }
+      ]
+    },
+    {
+      "id": "us-nc-mecklenburg-county.local-goods",
+      "regime": "regime:us-state-taxes",
+      "authority": "authority:us-nc-dor",
+      "taxType": "SALES_TAX",
+      "services": [
+        "EQUIPMENT_SALE"
+      ],
+      "applies": [
+        {
+          "supply": "DOMESTIC",
+          "treatment": "CUSTOMER_CHARGE",
+          "responsibility": "seller-collects"
+        }
+      ],
+      "base": {
+        "kind": "LINE_NET"
+      },
+      "rounding": {
+        "mode": "HALF_UP",
+        "scale": 2,
+        "basis": "LINE"
+      },
+      "jurisdiction": "jurisdiction:us-nc-mecklenburg-county",
+      "name": "Mecklenburg County local sales tax on equipment (North Carolina)",
+      "emit": "US_NC_COUNTY_SALES_TAX",
+      "versions": [
+        {
+          "from": "2022-01-01",
+          "kind": "AD_VALOREM",
+          "rate": "0.02",
+          "source": "SRC-ZOIKO-US-NC-COUNTY-2026",
+          "citation": "Mecklenburg County local sales and use tax 2.00% on retail sales of tangible personal property sourced to the county, on top of the 4.75% State rate; the county's 0.50% transit tax is a separate component. NCDOR total general State, local and transit rates (historical table; current table effective July 1, 2026). Not applied to telecommunications service, which bears the 7% combined general rate collected by the State. https://www.ncdor.gov/taxes-forms/sales-and-use-tax/sales-and-use-tax-rates/historical-total-general-state-local-and-transit-sales-and-use-tax-rates"
+        }
+      ]
+    },
+    {
+      "id": "us-nc-mecklenburg-county.transit-goods",
+      "regime": "regime:us-state-taxes",
+      "authority": "authority:us-nc-dor",
+      "taxType": "SALES_TAX",
+      "services": [
+        "EQUIPMENT_SALE"
+      ],
+      "applies": [
+        {
+          "supply": "DOMESTIC",
+          "treatment": "CUSTOMER_CHARGE",
+          "responsibility": "seller-collects"
+        }
+      ],
+      "base": {
+        "kind": "LINE_NET"
+      },
+      "rounding": {
+        "mode": "HALF_UP",
+        "scale": 2,
+        "basis": "LINE"
+      },
+      "jurisdiction": "jurisdiction:us-nc-mecklenburg-county",
+      "name": "Mecklenburg County transit sales tax on equipment (North Carolina)",
+      "emit": "US_NC_COUNTY_TRANSIT_TAX",
+      "versions": [
+        {
+          "from": "2022-01-01",
+          "kind": "AD_VALOREM",
+          "rate": "0.005",
+          "source": "SRC-ZOIKO-US-NC-COUNTY-2026",
+          "citation": "Mecklenburg County 0.50% transit sales and use tax on retail sales of tangible personal property sourced to the county; unchanged in every period of the NCDOR historical rate table (January 1, 2022 onward). https://www.ncdor.gov/taxes-forms/sales-and-use-tax/sales-and-use-tax-rates/historical-total-general-state-local-and-transit-sales-and-use-tax-rates"
+        }
+      ]
+    },
+    {
+      "id": "us-nc-mecklenburg-county.additional-goods",
+      "regime": "regime:us-state-taxes",
+      "authority": "authority:us-nc-dor",
+      "taxType": "SALES_TAX",
+      "services": [
+        "EQUIPMENT_SALE"
+      ],
+      "applies": [
+        {
+          "supply": "DOMESTIC",
+          "treatment": "CUSTOMER_CHARGE",
+          "responsibility": "seller-collects"
+        }
+      ],
+      "base": {
+        "kind": "LINE_NET"
+      },
+      "rounding": {
+        "mode": "HALF_UP",
+        "scale": 2,
+        "basis": "LINE"
+      },
+      "jurisdiction": "jurisdiction:us-nc-mecklenburg-county",
+      "name": "Mecklenburg County additional 1% sales tax on equipment (North Carolina)",
+      "emit": "US_NC_COUNTY_ADDITIONAL_TAX",
+      "versions": [
+        {
+          "from": "2026-07-01",
+          "kind": "AD_VALOREM",
+          "rate": "0.01",
+          "source": "SRC-ZOIKO-US-NC-COUNTY-2026",
+          "citation": "Mecklenburg County Additional County Rate of 1% from July 1, 2026 (S.L. 2025-39; approved by referendum November 4, 2025), raising the combined rate from 7.25% to 8.25%; in addition to the 0.50% transit tax. It does not apply to telecommunications and ancillary service, which stays at 7%. https://www.ncdor.gov/taxes-forms/sales-and-use-tax/other-sales-and-use-tax-resources/important-notices-issued-sales-and-use-tax-division/important-notice-mecklenburg-county-sales-and-use-tax-increase"
+        }
+      ]
+    },
+    {
+      "id": "us-nc-mitchell-county.local-goods",
+      "regime": "regime:us-state-taxes",
+      "authority": "authority:us-nc-dor",
+      "taxType": "SALES_TAX",
+      "services": [
+        "EQUIPMENT_SALE"
+      ],
+      "applies": [
+        {
+          "supply": "DOMESTIC",
+          "treatment": "CUSTOMER_CHARGE",
+          "responsibility": "seller-collects"
+        }
+      ],
+      "base": {
+        "kind": "LINE_NET"
+      },
+      "rounding": {
+        "mode": "HALF_UP",
+        "scale": 2,
+        "basis": "LINE"
+      },
+      "jurisdiction": "jurisdiction:us-nc-mitchell-county",
+      "name": "Mitchell County local sales tax on equipment (North Carolina)",
+      "emit": "US_NC_COUNTY_SALES_TAX",
+      "versions": [
+        {
+          "from": "2022-01-01",
+          "kind": "AD_VALOREM",
+          "rate": "0.02",
+          "source": "SRC-ZOIKO-US-NC-COUNTY-2026",
+          "citation": "Mitchell County local sales and use tax 2.00% on retail sales of tangible personal property sourced to the county, on top of the 4.75% State rate. NCDOR total general State, local and transit rates (historical table; current table effective July 1, 2026). Not applied to telecommunications service, which bears the 7% combined general rate collected by the State. https://www.ncdor.gov/taxes-forms/sales-and-use-tax/sales-and-use-tax-rates/historical-total-general-state-local-and-transit-sales-and-use-tax-rates"
+        }
+      ]
+    },
+    {
+      "id": "us-nc-montgomery-county.local-goods",
+      "regime": "regime:us-state-taxes",
+      "authority": "authority:us-nc-dor",
+      "taxType": "SALES_TAX",
+      "services": [
+        "EQUIPMENT_SALE"
+      ],
+      "applies": [
+        {
+          "supply": "DOMESTIC",
+          "treatment": "CUSTOMER_CHARGE",
+          "responsibility": "seller-collects"
+        }
+      ],
+      "base": {
+        "kind": "LINE_NET"
+      },
+      "rounding": {
+        "mode": "HALF_UP",
+        "scale": 2,
+        "basis": "LINE"
+      },
+      "jurisdiction": "jurisdiction:us-nc-montgomery-county",
+      "name": "Montgomery County local sales tax on equipment (North Carolina)",
+      "emit": "US_NC_COUNTY_SALES_TAX",
+      "versions": [
+        {
+          "from": "2022-01-01",
+          "kind": "AD_VALOREM",
+          "rate": "0.0225",
+          "source": "SRC-ZOIKO-US-NC-COUNTY-2026",
+          "citation": "Montgomery County local sales and use tax 2.25% on retail sales of tangible personal property sourced to the county, on top of the 4.75% State rate. NCDOR total general State, local and transit rates (historical table; current table effective July 1, 2026). Not applied to telecommunications service, which bears the 7% combined general rate collected by the State. https://www.ncdor.gov/taxes-forms/sales-and-use-tax/sales-and-use-tax-rates/historical-total-general-state-local-and-transit-sales-and-use-tax-rates"
+        }
+      ]
+    },
+    {
+      "id": "us-nc-moore-county.local-goods",
+      "regime": "regime:us-state-taxes",
+      "authority": "authority:us-nc-dor",
+      "taxType": "SALES_TAX",
+      "services": [
+        "EQUIPMENT_SALE"
+      ],
+      "applies": [
+        {
+          "supply": "DOMESTIC",
+          "treatment": "CUSTOMER_CHARGE",
+          "responsibility": "seller-collects"
+        }
+      ],
+      "base": {
+        "kind": "LINE_NET"
+      },
+      "rounding": {
+        "mode": "HALF_UP",
+        "scale": 2,
+        "basis": "LINE"
+      },
+      "jurisdiction": "jurisdiction:us-nc-moore-county",
+      "name": "Moore County local sales tax on equipment (North Carolina)",
+      "emit": "US_NC_COUNTY_SALES_TAX",
+      "versions": [
+        {
+          "from": "2022-01-01",
+          "kind": "AD_VALOREM",
+          "rate": "0.0225",
+          "source": "SRC-ZOIKO-US-NC-COUNTY-2026",
+          "citation": "Moore County local sales and use tax 2.25% on retail sales of tangible personal property sourced to the county, on top of the 4.75% State rate. NCDOR total general State, local and transit rates (historical table; current table effective July 1, 2026). Not applied to telecommunications service, which bears the 7% combined general rate collected by the State. https://www.ncdor.gov/taxes-forms/sales-and-use-tax/sales-and-use-tax-rates/historical-total-general-state-local-and-transit-sales-and-use-tax-rates"
+        }
+      ]
+    },
+    {
+      "id": "us-nc-nash-county.local-goods",
+      "regime": "regime:us-state-taxes",
+      "authority": "authority:us-nc-dor",
+      "taxType": "SALES_TAX",
+      "services": [
+        "EQUIPMENT_SALE"
+      ],
+      "applies": [
+        {
+          "supply": "DOMESTIC",
+          "treatment": "CUSTOMER_CHARGE",
+          "responsibility": "seller-collects"
+        }
+      ],
+      "base": {
+        "kind": "LINE_NET"
+      },
+      "rounding": {
+        "mode": "HALF_UP",
+        "scale": 2,
+        "basis": "LINE"
+      },
+      "jurisdiction": "jurisdiction:us-nc-nash-county",
+      "name": "Nash County local sales tax on equipment (North Carolina)",
+      "emit": "US_NC_COUNTY_SALES_TAX",
+      "versions": [
+        {
+          "from": "2022-01-01",
+          "kind": "AD_VALOREM",
+          "rate": "0.02",
+          "source": "SRC-ZOIKO-US-NC-COUNTY-2026",
+          "citation": "Nash County local sales and use tax 2.00% on retail sales of tangible personal property sourced to the county, on top of the 4.75% State rate. NCDOR total general State, local and transit rates (historical table; current table effective July 1, 2026). Not applied to telecommunications service, which bears the 7% combined general rate collected by the State. https://www.ncdor.gov/taxes-forms/sales-and-use-tax/sales-and-use-tax-rates/historical-total-general-state-local-and-transit-sales-and-use-tax-rates"
+        }
+      ]
+    },
+    {
+      "id": "us-nc-new-hanover-county.local-goods",
+      "regime": "regime:us-state-taxes",
+      "authority": "authority:us-nc-dor",
+      "taxType": "SALES_TAX",
+      "services": [
+        "EQUIPMENT_SALE"
+      ],
+      "applies": [
+        {
+          "supply": "DOMESTIC",
+          "treatment": "CUSTOMER_CHARGE",
+          "responsibility": "seller-collects"
+        }
+      ],
+      "base": {
+        "kind": "LINE_NET"
+      },
+      "rounding": {
+        "mode": "HALF_UP",
+        "scale": 2,
+        "basis": "LINE"
+      },
+      "jurisdiction": "jurisdiction:us-nc-new-hanover-county",
+      "name": "New Hanover County local sales tax on equipment (North Carolina)",
+      "emit": "US_NC_COUNTY_SALES_TAX",
+      "versions": [
+        {
+          "from": "2022-01-01",
+          "kind": "AD_VALOREM",
+          "rate": "0.0225",
+          "source": "SRC-ZOIKO-US-NC-COUNTY-2026",
+          "citation": "New Hanover County local sales and use tax 2.25% on retail sales of tangible personal property sourced to the county, on top of the 4.75% State rate. NCDOR total general State, local and transit rates (historical table; current table effective July 1, 2026). Not applied to telecommunications service, which bears the 7% combined general rate collected by the State. https://www.ncdor.gov/taxes-forms/sales-and-use-tax/sales-and-use-tax-rates/historical-total-general-state-local-and-transit-sales-and-use-tax-rates"
+        }
+      ]
+    },
+    {
+      "id": "us-nc-northampton-county.local-goods",
+      "regime": "regime:us-state-taxes",
+      "authority": "authority:us-nc-dor",
+      "taxType": "SALES_TAX",
+      "services": [
+        "EQUIPMENT_SALE"
+      ],
+      "applies": [
+        {
+          "supply": "DOMESTIC",
+          "treatment": "CUSTOMER_CHARGE",
+          "responsibility": "seller-collects"
+        }
+      ],
+      "base": {
+        "kind": "LINE_NET"
+      },
+      "rounding": {
+        "mode": "HALF_UP",
+        "scale": 2,
+        "basis": "LINE"
+      },
+      "jurisdiction": "jurisdiction:us-nc-northampton-county",
+      "name": "Northampton County local sales tax on equipment (North Carolina)",
+      "emit": "US_NC_COUNTY_SALES_TAX",
+      "versions": [
+        {
+          "from": "2022-01-01",
+          "kind": "AD_VALOREM",
+          "rate": "0.02",
+          "source": "SRC-ZOIKO-US-NC-COUNTY-2026",
+          "citation": "Northampton County local sales and use tax 2.00% on retail sales of tangible personal property sourced to the county, on top of the 4.75% State rate. NCDOR total general State, local and transit rates (historical table; current table effective July 1, 2026). Not applied to telecommunications service, which bears the 7% combined general rate collected by the State. https://www.ncdor.gov/taxes-forms/sales-and-use-tax/sales-and-use-tax-rates/historical-total-general-state-local-and-transit-sales-and-use-tax-rates"
+        }
+      ]
+    },
+    {
+      "id": "us-nc-onslow-county.local-goods",
+      "regime": "regime:us-state-taxes",
+      "authority": "authority:us-nc-dor",
+      "taxType": "SALES_TAX",
+      "services": [
+        "EQUIPMENT_SALE"
+      ],
+      "applies": [
+        {
+          "supply": "DOMESTIC",
+          "treatment": "CUSTOMER_CHARGE",
+          "responsibility": "seller-collects"
+        }
+      ],
+      "base": {
+        "kind": "LINE_NET"
+      },
+      "rounding": {
+        "mode": "HALF_UP",
+        "scale": 2,
+        "basis": "LINE"
+      },
+      "jurisdiction": "jurisdiction:us-nc-onslow-county",
+      "name": "Onslow County local sales tax on equipment (North Carolina)",
+      "emit": "US_NC_COUNTY_SALES_TAX",
+      "versions": [
+        {
+          "from": "2022-01-01",
+          "kind": "AD_VALOREM",
+          "rate": "0.0225",
+          "source": "SRC-ZOIKO-US-NC-COUNTY-2026",
+          "citation": "Onslow County local sales and use tax 2.25% on retail sales of tangible personal property sourced to the county, on top of the 4.75% State rate. NCDOR total general State, local and transit rates (historical table; current table effective July 1, 2026). Not applied to telecommunications service, which bears the 7% combined general rate collected by the State. https://www.ncdor.gov/taxes-forms/sales-and-use-tax/sales-and-use-tax-rates/historical-total-general-state-local-and-transit-sales-and-use-tax-rates"
+        }
+      ]
+    },
+    {
+      "id": "us-nc-orange-county.local-goods",
+      "regime": "regime:us-state-taxes",
+      "authority": "authority:us-nc-dor",
+      "taxType": "SALES_TAX",
+      "services": [
+        "EQUIPMENT_SALE"
+      ],
+      "applies": [
+        {
+          "supply": "DOMESTIC",
+          "treatment": "CUSTOMER_CHARGE",
+          "responsibility": "seller-collects"
+        }
+      ],
+      "base": {
+        "kind": "LINE_NET"
+      },
+      "rounding": {
+        "mode": "HALF_UP",
+        "scale": 2,
+        "basis": "LINE"
+      },
+      "jurisdiction": "jurisdiction:us-nc-orange-county",
+      "name": "Orange County local sales tax on equipment (North Carolina)",
+      "emit": "US_NC_COUNTY_SALES_TAX",
+      "versions": [
+        {
+          "from": "2022-01-01",
+          "kind": "AD_VALOREM",
+          "rate": "0.0225",
+          "source": "SRC-ZOIKO-US-NC-COUNTY-2026",
+          "citation": "Orange County local sales and use tax 2.25% on retail sales of tangible personal property sourced to the county, on top of the 4.75% State rate; the county's 0.50% transit tax is a separate component. NCDOR total general State, local and transit rates (historical table; current table effective July 1, 2026). Not applied to telecommunications service, which bears the 7% combined general rate collected by the State. https://www.ncdor.gov/taxes-forms/sales-and-use-tax/sales-and-use-tax-rates/historical-total-general-state-local-and-transit-sales-and-use-tax-rates"
+        }
+      ]
+    },
+    {
+      "id": "us-nc-orange-county.transit-goods",
+      "regime": "regime:us-state-taxes",
+      "authority": "authority:us-nc-dor",
+      "taxType": "SALES_TAX",
+      "services": [
+        "EQUIPMENT_SALE"
+      ],
+      "applies": [
+        {
+          "supply": "DOMESTIC",
+          "treatment": "CUSTOMER_CHARGE",
+          "responsibility": "seller-collects"
+        }
+      ],
+      "base": {
+        "kind": "LINE_NET"
+      },
+      "rounding": {
+        "mode": "HALF_UP",
+        "scale": 2,
+        "basis": "LINE"
+      },
+      "jurisdiction": "jurisdiction:us-nc-orange-county",
+      "name": "Orange County transit sales tax on equipment (North Carolina)",
+      "emit": "US_NC_COUNTY_TRANSIT_TAX",
+      "versions": [
+        {
+          "from": "2022-01-01",
+          "kind": "AD_VALOREM",
+          "rate": "0.005",
+          "source": "SRC-ZOIKO-US-NC-COUNTY-2026",
+          "citation": "Orange County 0.50% transit sales and use tax on retail sales of tangible personal property sourced to the county; unchanged in every period of the NCDOR historical rate table (January 1, 2022 onward). https://www.ncdor.gov/taxes-forms/sales-and-use-tax/sales-and-use-tax-rates/historical-total-general-state-local-and-transit-sales-and-use-tax-rates"
+        }
+      ]
+    },
+    {
+      "id": "us-nc-pamlico-county.local-goods",
+      "regime": "regime:us-state-taxes",
+      "authority": "authority:us-nc-dor",
+      "taxType": "SALES_TAX",
+      "services": [
+        "EQUIPMENT_SALE"
+      ],
+      "applies": [
+        {
+          "supply": "DOMESTIC",
+          "treatment": "CUSTOMER_CHARGE",
+          "responsibility": "seller-collects"
+        }
+      ],
+      "base": {
+        "kind": "LINE_NET"
+      },
+      "rounding": {
+        "mode": "HALF_UP",
+        "scale": 2,
+        "basis": "LINE"
+      },
+      "jurisdiction": "jurisdiction:us-nc-pamlico-county",
+      "name": "Pamlico County local sales tax on equipment (North Carolina)",
+      "emit": "US_NC_COUNTY_SALES_TAX",
+      "versions": [
+        {
+          "from": "2022-01-01",
+          "kind": "AD_VALOREM",
+          "rate": "0.02",
+          "source": "SRC-ZOIKO-US-NC-COUNTY-2026",
+          "citation": "Pamlico County local sales and use tax 2.00% on retail sales of tangible personal property sourced to the county, on top of the 4.75% State rate. NCDOR total general State, local and transit rates (historical table; current table effective July 1, 2026). Not applied to telecommunications service, which bears the 7% combined general rate collected by the State. https://www.ncdor.gov/taxes-forms/sales-and-use-tax/sales-and-use-tax-rates/historical-total-general-state-local-and-transit-sales-and-use-tax-rates"
+        }
+      ]
+    },
+    {
+      "id": "us-nc-pasquotank-county.local-goods",
+      "regime": "regime:us-state-taxes",
+      "authority": "authority:us-nc-dor",
+      "taxType": "SALES_TAX",
+      "services": [
+        "EQUIPMENT_SALE"
+      ],
+      "applies": [
+        {
+          "supply": "DOMESTIC",
+          "treatment": "CUSTOMER_CHARGE",
+          "responsibility": "seller-collects"
+        }
+      ],
+      "base": {
+        "kind": "LINE_NET"
+      },
+      "rounding": {
+        "mode": "HALF_UP",
+        "scale": 2,
+        "basis": "LINE"
+      },
+      "jurisdiction": "jurisdiction:us-nc-pasquotank-county",
+      "name": "Pasquotank County local sales tax on equipment (North Carolina)",
+      "emit": "US_NC_COUNTY_SALES_TAX",
+      "versions": [
+        {
+          "from": "2022-01-01",
+          "kind": "AD_VALOREM",
+          "rate": "0.0225",
+          "source": "SRC-ZOIKO-US-NC-COUNTY-2026",
+          "citation": "Pasquotank County local sales and use tax 2.25% on retail sales of tangible personal property sourced to the county, on top of the 4.75% State rate. NCDOR total general State, local and transit rates (historical table; current table effective July 1, 2026). Not applied to telecommunications service, which bears the 7% combined general rate collected by the State. https://www.ncdor.gov/taxes-forms/sales-and-use-tax/sales-and-use-tax-rates/historical-total-general-state-local-and-transit-sales-and-use-tax-rates"
+        }
+      ]
+    },
+    {
+      "id": "us-nc-pender-county.local-goods",
+      "regime": "regime:us-state-taxes",
+      "authority": "authority:us-nc-dor",
+      "taxType": "SALES_TAX",
+      "services": [
+        "EQUIPMENT_SALE"
+      ],
+      "applies": [
+        {
+          "supply": "DOMESTIC",
+          "treatment": "CUSTOMER_CHARGE",
+          "responsibility": "seller-collects"
+        }
+      ],
+      "base": {
+        "kind": "LINE_NET"
+      },
+      "rounding": {
+        "mode": "HALF_UP",
+        "scale": 2,
+        "basis": "LINE"
+      },
+      "jurisdiction": "jurisdiction:us-nc-pender-county",
+      "name": "Pender County local sales tax on equipment (North Carolina)",
+      "emit": "US_NC_COUNTY_SALES_TAX",
+      "versions": [
+        {
+          "from": "2022-01-01",
+          "kind": "AD_VALOREM",
+          "rate": "0.02",
+          "source": "SRC-ZOIKO-US-NC-COUNTY-2026",
+          "citation": "Pender County local sales and use tax 2.00% on retail sales of tangible personal property sourced to the county, on top of the 4.75% State rate. NCDOR total general State, local and transit rates (historical table; current table effective July 1, 2026). Not applied to telecommunications service, which bears the 7% combined general rate collected by the State. https://www.ncdor.gov/taxes-forms/sales-and-use-tax/sales-and-use-tax-rates/historical-total-general-state-local-and-transit-sales-and-use-tax-rates"
+        }
+      ]
+    },
+    {
+      "id": "us-nc-perquimans-county.local-goods",
+      "regime": "regime:us-state-taxes",
+      "authority": "authority:us-nc-dor",
+      "taxType": "SALES_TAX",
+      "services": [
+        "EQUIPMENT_SALE"
+      ],
+      "applies": [
+        {
+          "supply": "DOMESTIC",
+          "treatment": "CUSTOMER_CHARGE",
+          "responsibility": "seller-collects"
+        }
+      ],
+      "base": {
+        "kind": "LINE_NET"
+      },
+      "rounding": {
+        "mode": "HALF_UP",
+        "scale": 2,
+        "basis": "LINE"
+      },
+      "jurisdiction": "jurisdiction:us-nc-perquimans-county",
+      "name": "Perquimans County local sales tax on equipment (North Carolina)",
+      "emit": "US_NC_COUNTY_SALES_TAX",
+      "versions": [
+        {
+          "from": "2022-01-01",
+          "kind": "AD_VALOREM",
+          "rate": "0.02",
+          "source": "SRC-ZOIKO-US-NC-COUNTY-2026",
+          "citation": "Perquimans County local sales and use tax 2.00% on retail sales of tangible personal property sourced to the county, on top of the 4.75% State rate. NCDOR total general State, local and transit rates (historical table; current table effective July 1, 2026). Not applied to telecommunications service, which bears the 7% combined general rate collected by the State. https://www.ncdor.gov/taxes-forms/sales-and-use-tax/sales-and-use-tax-rates/historical-total-general-state-local-and-transit-sales-and-use-tax-rates"
+        }
+      ]
+    },
+    {
+      "id": "us-nc-person-county.local-goods",
+      "regime": "regime:us-state-taxes",
+      "authority": "authority:us-nc-dor",
+      "taxType": "SALES_TAX",
+      "services": [
+        "EQUIPMENT_SALE"
+      ],
+      "applies": [
+        {
+          "supply": "DOMESTIC",
+          "treatment": "CUSTOMER_CHARGE",
+          "responsibility": "seller-collects"
+        }
+      ],
+      "base": {
+        "kind": "LINE_NET"
+      },
+      "rounding": {
+        "mode": "HALF_UP",
+        "scale": 2,
+        "basis": "LINE"
+      },
+      "jurisdiction": "jurisdiction:us-nc-person-county",
+      "name": "Person County local sales tax on equipment (North Carolina)",
+      "emit": "US_NC_COUNTY_SALES_TAX",
+      "versions": [
+        {
+          "from": "2022-01-01",
+          "kind": "AD_VALOREM",
+          "rate": "0.02",
+          "source": "SRC-ZOIKO-US-NC-COUNTY-2026",
+          "citation": "Person County local sales and use tax 2.00% on retail sales of tangible personal property sourced to the county, on top of the 4.75% State rate. NCDOR total general State, local and transit rates (historical table; current table effective July 1, 2026). Not applied to telecommunications service, which bears the 7% combined general rate collected by the State. https://www.ncdor.gov/taxes-forms/sales-and-use-tax/sales-and-use-tax-rates/historical-total-general-state-local-and-transit-sales-and-use-tax-rates"
+        }
+      ]
+    },
+    {
+      "id": "us-nc-pitt-county.local-goods",
+      "regime": "regime:us-state-taxes",
+      "authority": "authority:us-nc-dor",
+      "taxType": "SALES_TAX",
+      "services": [
+        "EQUIPMENT_SALE"
+      ],
+      "applies": [
+        {
+          "supply": "DOMESTIC",
+          "treatment": "CUSTOMER_CHARGE",
+          "responsibility": "seller-collects"
+        }
+      ],
+      "base": {
+        "kind": "LINE_NET"
+      },
+      "rounding": {
+        "mode": "HALF_UP",
+        "scale": 2,
+        "basis": "LINE"
+      },
+      "jurisdiction": "jurisdiction:us-nc-pitt-county",
+      "name": "Pitt County local sales tax on equipment (North Carolina)",
+      "emit": "US_NC_COUNTY_SALES_TAX",
+      "versions": [
+        {
+          "from": "2022-01-01",
+          "kind": "AD_VALOREM",
+          "rate": "0.0225",
+          "source": "SRC-ZOIKO-US-NC-COUNTY-2026",
+          "citation": "Pitt County local sales and use tax 2.25% on retail sales of tangible personal property sourced to the county, on top of the 4.75% State rate. NCDOR total general State, local and transit rates (historical table; current table effective July 1, 2026). Not applied to telecommunications service, which bears the 7% combined general rate collected by the State. https://www.ncdor.gov/taxes-forms/sales-and-use-tax/sales-and-use-tax-rates/historical-total-general-state-local-and-transit-sales-and-use-tax-rates"
+        }
+      ]
+    },
+    {
+      "id": "us-nc-polk-county.local-goods",
+      "regime": "regime:us-state-taxes",
+      "authority": "authority:us-nc-dor",
+      "taxType": "SALES_TAX",
+      "services": [
+        "EQUIPMENT_SALE"
+      ],
+      "applies": [
+        {
+          "supply": "DOMESTIC",
+          "treatment": "CUSTOMER_CHARGE",
+          "responsibility": "seller-collects"
+        }
+      ],
+      "base": {
+        "kind": "LINE_NET"
+      },
+      "rounding": {
+        "mode": "HALF_UP",
+        "scale": 2,
+        "basis": "LINE"
+      },
+      "jurisdiction": "jurisdiction:us-nc-polk-county",
+      "name": "Polk County local sales tax on equipment (North Carolina)",
+      "emit": "US_NC_COUNTY_SALES_TAX",
+      "versions": [
+        {
+          "from": "2022-01-01",
+          "kind": "AD_VALOREM",
+          "rate": "0.02",
+          "source": "SRC-ZOIKO-US-NC-COUNTY-2026",
+          "citation": "Polk County local sales and use tax 2.00% on retail sales of tangible personal property sourced to the county, on top of the 4.75% State rate. NCDOR total general State, local and transit rates (historical table; current table effective July 1, 2026). Not applied to telecommunications service, which bears the 7% combined general rate collected by the State. https://www.ncdor.gov/taxes-forms/sales-and-use-tax/sales-and-use-tax-rates/historical-total-general-state-local-and-transit-sales-and-use-tax-rates"
+        }
+      ]
+    },
+    {
+      "id": "us-nc-randolph-county.local-goods",
+      "regime": "regime:us-state-taxes",
+      "authority": "authority:us-nc-dor",
+      "taxType": "SALES_TAX",
+      "services": [
+        "EQUIPMENT_SALE"
+      ],
+      "applies": [
+        {
+          "supply": "DOMESTIC",
+          "treatment": "CUSTOMER_CHARGE",
+          "responsibility": "seller-collects"
+        }
+      ],
+      "base": {
+        "kind": "LINE_NET"
+      },
+      "rounding": {
+        "mode": "HALF_UP",
+        "scale": 2,
+        "basis": "LINE"
+      },
+      "jurisdiction": "jurisdiction:us-nc-randolph-county",
+      "name": "Randolph County local sales tax on equipment (North Carolina)",
+      "emit": "US_NC_COUNTY_SALES_TAX",
+      "versions": [
+        {
+          "from": "2022-01-01",
+          "kind": "AD_VALOREM",
+          "rate": "0.0225",
+          "source": "SRC-ZOIKO-US-NC-COUNTY-2026",
+          "citation": "Randolph County local sales and use tax 2.25% on retail sales of tangible personal property sourced to the county, on top of the 4.75% State rate. NCDOR total general State, local and transit rates (historical table; current table effective July 1, 2026). Not applied to telecommunications service, which bears the 7% combined general rate collected by the State. https://www.ncdor.gov/taxes-forms/sales-and-use-tax/sales-and-use-tax-rates/historical-total-general-state-local-and-transit-sales-and-use-tax-rates"
+        }
+      ]
+    },
+    {
+      "id": "us-nc-richmond-county.local-goods",
+      "regime": "regime:us-state-taxes",
+      "authority": "authority:us-nc-dor",
+      "taxType": "SALES_TAX",
+      "services": [
+        "EQUIPMENT_SALE"
+      ],
+      "applies": [
+        {
+          "supply": "DOMESTIC",
+          "treatment": "CUSTOMER_CHARGE",
+          "responsibility": "seller-collects"
+        }
+      ],
+      "base": {
+        "kind": "LINE_NET"
+      },
+      "rounding": {
+        "mode": "HALF_UP",
+        "scale": 2,
+        "basis": "LINE"
+      },
+      "jurisdiction": "jurisdiction:us-nc-richmond-county",
+      "name": "Richmond County local sales tax on equipment (North Carolina)",
+      "emit": "US_NC_COUNTY_SALES_TAX",
+      "versions": [
+        {
+          "from": "2022-01-01",
+          "kind": "AD_VALOREM",
+          "rate": "0.02",
+          "source": "SRC-ZOIKO-US-NC-COUNTY-2026",
+          "citation": "Richmond County local sales and use tax 2.00% on retail sales of tangible personal property sourced to the county, on top of the 4.75% State rate. NCDOR total general State, local and transit rates (historical table; current table effective July 1, 2026). Not applied to telecommunications service, which bears the 7% combined general rate collected by the State. https://www.ncdor.gov/taxes-forms/sales-and-use-tax/sales-and-use-tax-rates/historical-total-general-state-local-and-transit-sales-and-use-tax-rates"
+        }
+      ]
+    },
+    {
+      "id": "us-nc-robeson-county.local-goods",
+      "regime": "regime:us-state-taxes",
+      "authority": "authority:us-nc-dor",
+      "taxType": "SALES_TAX",
+      "services": [
+        "EQUIPMENT_SALE"
+      ],
+      "applies": [
+        {
+          "supply": "DOMESTIC",
+          "treatment": "CUSTOMER_CHARGE",
+          "responsibility": "seller-collects"
+        }
+      ],
+      "base": {
+        "kind": "LINE_NET"
+      },
+      "rounding": {
+        "mode": "HALF_UP",
+        "scale": 2,
+        "basis": "LINE"
+      },
+      "jurisdiction": "jurisdiction:us-nc-robeson-county",
+      "name": "Robeson County local sales tax on equipment (North Carolina)",
+      "emit": "US_NC_COUNTY_SALES_TAX",
+      "versions": [
+        {
+          "from": "2022-01-01",
+          "kind": "AD_VALOREM",
+          "rate": "0.0225",
+          "source": "SRC-ZOIKO-US-NC-COUNTY-2026",
+          "citation": "Robeson County local sales and use tax 2.25% on retail sales of tangible personal property sourced to the county, on top of the 4.75% State rate. NCDOR total general State, local and transit rates (historical table; current table effective July 1, 2026). Not applied to telecommunications service, which bears the 7% combined general rate collected by the State. https://www.ncdor.gov/taxes-forms/sales-and-use-tax/sales-and-use-tax-rates/historical-total-general-state-local-and-transit-sales-and-use-tax-rates"
+        }
+      ]
+    },
+    {
+      "id": "us-nc-rockingham-county.local-goods",
+      "regime": "regime:us-state-taxes",
+      "authority": "authority:us-nc-dor",
+      "taxType": "SALES_TAX",
+      "services": [
+        "EQUIPMENT_SALE"
+      ],
+      "applies": [
+        {
+          "supply": "DOMESTIC",
+          "treatment": "CUSTOMER_CHARGE",
+          "responsibility": "seller-collects"
+        }
+      ],
+      "base": {
+        "kind": "LINE_NET"
+      },
+      "rounding": {
+        "mode": "HALF_UP",
+        "scale": 2,
+        "basis": "LINE"
+      },
+      "jurisdiction": "jurisdiction:us-nc-rockingham-county",
+      "name": "Rockingham County local sales tax on equipment (North Carolina)",
+      "emit": "US_NC_COUNTY_SALES_TAX",
+      "versions": [
+        {
+          "from": "2022-01-01",
+          "kind": "AD_VALOREM",
+          "rate": "0.0225",
+          "source": "SRC-ZOIKO-US-NC-COUNTY-2026",
+          "citation": "Rockingham County local sales and use tax 2.25% on retail sales of tangible personal property sourced to the county, on top of the 4.75% State rate. NCDOR total general State, local and transit rates (historical table; current table effective July 1, 2026). Not applied to telecommunications service, which bears the 7% combined general rate collected by the State. https://www.ncdor.gov/taxes-forms/sales-and-use-tax/sales-and-use-tax-rates/historical-total-general-state-local-and-transit-sales-and-use-tax-rates"
+        }
+      ]
+    },
+    {
+      "id": "us-nc-rowan-county.local-goods",
+      "regime": "regime:us-state-taxes",
+      "authority": "authority:us-nc-dor",
+      "taxType": "SALES_TAX",
+      "services": [
+        "EQUIPMENT_SALE"
+      ],
+      "applies": [
+        {
+          "supply": "DOMESTIC",
+          "treatment": "CUSTOMER_CHARGE",
+          "responsibility": "seller-collects"
+        }
+      ],
+      "base": {
+        "kind": "LINE_NET"
+      },
+      "rounding": {
+        "mode": "HALF_UP",
+        "scale": 2,
+        "basis": "LINE"
+      },
+      "jurisdiction": "jurisdiction:us-nc-rowan-county",
+      "name": "Rowan County local sales tax on equipment (North Carolina)",
+      "emit": "US_NC_COUNTY_SALES_TAX",
+      "versions": [
+        {
+          "from": "2022-01-01",
+          "kind": "AD_VALOREM",
+          "rate": "0.0225",
+          "source": "SRC-ZOIKO-US-NC-COUNTY-2026",
+          "citation": "Rowan County local sales and use tax 2.25% on retail sales of tangible personal property sourced to the county, on top of the 4.75% State rate. NCDOR total general State, local and transit rates (historical table; current table effective July 1, 2026). Not applied to telecommunications service, which bears the 7% combined general rate collected by the State. https://www.ncdor.gov/taxes-forms/sales-and-use-tax/sales-and-use-tax-rates/historical-total-general-state-local-and-transit-sales-and-use-tax-rates"
+        }
+      ]
+    },
+    {
+      "id": "us-nc-rutherford-county.local-goods",
+      "regime": "regime:us-state-taxes",
+      "authority": "authority:us-nc-dor",
+      "taxType": "SALES_TAX",
+      "services": [
+        "EQUIPMENT_SALE"
+      ],
+      "applies": [
+        {
+          "supply": "DOMESTIC",
+          "treatment": "CUSTOMER_CHARGE",
+          "responsibility": "seller-collects"
+        }
+      ],
+      "base": {
+        "kind": "LINE_NET"
+      },
+      "rounding": {
+        "mode": "HALF_UP",
+        "scale": 2,
+        "basis": "LINE"
+      },
+      "jurisdiction": "jurisdiction:us-nc-rutherford-county",
+      "name": "Rutherford County local sales tax on equipment (North Carolina)",
+      "emit": "US_NC_COUNTY_SALES_TAX",
+      "versions": [
+        {
+          "from": "2022-01-01",
+          "kind": "AD_VALOREM",
+          "rate": "0.0225",
+          "source": "SRC-ZOIKO-US-NC-COUNTY-2026",
+          "citation": "Rutherford County local sales and use tax 2.25% on retail sales of tangible personal property sourced to the county, on top of the 4.75% State rate. NCDOR total general State, local and transit rates (historical table; current table effective July 1, 2026). Not applied to telecommunications service, which bears the 7% combined general rate collected by the State. https://www.ncdor.gov/taxes-forms/sales-and-use-tax/sales-and-use-tax-rates/historical-total-general-state-local-and-transit-sales-and-use-tax-rates"
+        }
+      ]
+    },
+    {
+      "id": "us-nc-sampson-county.local-goods",
+      "regime": "regime:us-state-taxes",
+      "authority": "authority:us-nc-dor",
+      "taxType": "SALES_TAX",
+      "services": [
+        "EQUIPMENT_SALE"
+      ],
+      "applies": [
+        {
+          "supply": "DOMESTIC",
+          "treatment": "CUSTOMER_CHARGE",
+          "responsibility": "seller-collects"
+        }
+      ],
+      "base": {
+        "kind": "LINE_NET"
+      },
+      "rounding": {
+        "mode": "HALF_UP",
+        "scale": 2,
+        "basis": "LINE"
+      },
+      "jurisdiction": "jurisdiction:us-nc-sampson-county",
+      "name": "Sampson County local sales tax on equipment (North Carolina)",
+      "emit": "US_NC_COUNTY_SALES_TAX",
+      "versions": [
+        {
+          "from": "2022-01-01",
+          "kind": "AD_VALOREM",
+          "rate": "0.0225",
+          "source": "SRC-ZOIKO-US-NC-COUNTY-2026",
+          "citation": "Sampson County local sales and use tax 2.25% on retail sales of tangible personal property sourced to the county, on top of the 4.75% State rate. NCDOR total general State, local and transit rates (historical table; current table effective July 1, 2026). Not applied to telecommunications service, which bears the 7% combined general rate collected by the State. https://www.ncdor.gov/taxes-forms/sales-and-use-tax/sales-and-use-tax-rates/historical-total-general-state-local-and-transit-sales-and-use-tax-rates"
+        }
+      ]
+    },
+    {
+      "id": "us-nc-scotland-county.local-goods",
+      "regime": "regime:us-state-taxes",
+      "authority": "authority:us-nc-dor",
+      "taxType": "SALES_TAX",
+      "services": [
+        "EQUIPMENT_SALE"
+      ],
+      "applies": [
+        {
+          "supply": "DOMESTIC",
+          "treatment": "CUSTOMER_CHARGE",
+          "responsibility": "seller-collects"
+        }
+      ],
+      "base": {
+        "kind": "LINE_NET"
+      },
+      "rounding": {
+        "mode": "HALF_UP",
+        "scale": 2,
+        "basis": "LINE"
+      },
+      "jurisdiction": "jurisdiction:us-nc-scotland-county",
+      "name": "Scotland County local sales tax on equipment (North Carolina)",
+      "emit": "US_NC_COUNTY_SALES_TAX",
+      "versions": [
+        {
+          "from": "2022-01-01",
+          "kind": "AD_VALOREM",
+          "rate": "0.02",
+          "source": "SRC-ZOIKO-US-NC-COUNTY-2026",
+          "citation": "Scotland County local sales and use tax 2.00% on retail sales of tangible personal property sourced to the county, on top of the 4.75% State rate. NCDOR total general State, local and transit rates (historical table; current table effective July 1, 2026). Not applied to telecommunications service, which bears the 7% combined general rate collected by the State. https://www.ncdor.gov/taxes-forms/sales-and-use-tax/sales-and-use-tax-rates/historical-total-general-state-local-and-transit-sales-and-use-tax-rates"
+        }
+      ]
+    },
+    {
+      "id": "us-nc-stanly-county.local-goods",
+      "regime": "regime:us-state-taxes",
+      "authority": "authority:us-nc-dor",
+      "taxType": "SALES_TAX",
+      "services": [
+        "EQUIPMENT_SALE"
+      ],
+      "applies": [
+        {
+          "supply": "DOMESTIC",
+          "treatment": "CUSTOMER_CHARGE",
+          "responsibility": "seller-collects"
+        }
+      ],
+      "base": {
+        "kind": "LINE_NET"
+      },
+      "rounding": {
+        "mode": "HALF_UP",
+        "scale": 2,
+        "basis": "LINE"
+      },
+      "jurisdiction": "jurisdiction:us-nc-stanly-county",
+      "name": "Stanly County local sales tax on equipment (North Carolina)",
+      "emit": "US_NC_COUNTY_SALES_TAX",
+      "versions": [
+        {
+          "from": "2022-01-01",
+          "kind": "AD_VALOREM",
+          "rate": "0.0225",
+          "source": "SRC-ZOIKO-US-NC-COUNTY-2026",
+          "citation": "Stanly County local sales and use tax 2.25% on retail sales of tangible personal property sourced to the county, on top of the 4.75% State rate. NCDOR total general State, local and transit rates (historical table; current table effective July 1, 2026). Not applied to telecommunications service, which bears the 7% combined general rate collected by the State. https://www.ncdor.gov/taxes-forms/sales-and-use-tax/sales-and-use-tax-rates/historical-total-general-state-local-and-transit-sales-and-use-tax-rates"
+        }
+      ]
+    },
+    {
+      "id": "us-nc-stokes-county.local-goods",
+      "regime": "regime:us-state-taxes",
+      "authority": "authority:us-nc-dor",
+      "taxType": "SALES_TAX",
+      "services": [
+        "EQUIPMENT_SALE"
+      ],
+      "applies": [
+        {
+          "supply": "DOMESTIC",
+          "treatment": "CUSTOMER_CHARGE",
+          "responsibility": "seller-collects"
+        }
+      ],
+      "base": {
+        "kind": "LINE_NET"
+      },
+      "rounding": {
+        "mode": "HALF_UP",
+        "scale": 2,
+        "basis": "LINE"
+      },
+      "jurisdiction": "jurisdiction:us-nc-stokes-county",
+      "name": "Stokes County local sales tax on equipment (North Carolina)",
+      "emit": "US_NC_COUNTY_SALES_TAX",
+      "versions": [
+        {
+          "from": "2022-01-01",
+          "kind": "AD_VALOREM",
+          "rate": "0.02",
+          "source": "SRC-ZOIKO-US-NC-COUNTY-2026",
+          "citation": "Stokes County local sales and use tax 2.00% on retail sales of tangible personal property sourced to the county, on top of the 4.75% State rate. NCDOR total general State, local and transit rates (historical table; current table effective July 1, 2026). Not applied to telecommunications service, which bears the 7% combined general rate collected by the State. https://www.ncdor.gov/taxes-forms/sales-and-use-tax/sales-and-use-tax-rates/historical-total-general-state-local-and-transit-sales-and-use-tax-rates"
+        }
+      ]
+    },
+    {
+      "id": "us-nc-surry-county.local-goods",
+      "regime": "regime:us-state-taxes",
+      "authority": "authority:us-nc-dor",
+      "taxType": "SALES_TAX",
+      "services": [
+        "EQUIPMENT_SALE"
+      ],
+      "applies": [
+        {
+          "supply": "DOMESTIC",
+          "treatment": "CUSTOMER_CHARGE",
+          "responsibility": "seller-collects"
+        }
+      ],
+      "base": {
+        "kind": "LINE_NET"
+      },
+      "rounding": {
+        "mode": "HALF_UP",
+        "scale": 2,
+        "basis": "LINE"
+      },
+      "jurisdiction": "jurisdiction:us-nc-surry-county",
+      "name": "Surry County local sales tax on equipment (North Carolina)",
+      "emit": "US_NC_COUNTY_SALES_TAX",
+      "versions": [
+        {
+          "from": "2022-01-01",
+          "kind": "AD_VALOREM",
+          "rate": "0.0225",
+          "source": "SRC-ZOIKO-US-NC-COUNTY-2026",
+          "citation": "Surry County local sales and use tax 2.25% on retail sales of tangible personal property sourced to the county, on top of the 4.75% State rate. NCDOR total general State, local and transit rates (historical table; current table effective July 1, 2026). Not applied to telecommunications service, which bears the 7% combined general rate collected by the State. https://www.ncdor.gov/taxes-forms/sales-and-use-tax/sales-and-use-tax-rates/historical-total-general-state-local-and-transit-sales-and-use-tax-rates"
+        }
+      ]
+    },
+    {
+      "id": "us-nc-swain-county.local-goods",
+      "regime": "regime:us-state-taxes",
+      "authority": "authority:us-nc-dor",
+      "taxType": "SALES_TAX",
+      "services": [
+        "EQUIPMENT_SALE"
+      ],
+      "applies": [
+        {
+          "supply": "DOMESTIC",
+          "treatment": "CUSTOMER_CHARGE",
+          "responsibility": "seller-collects"
+        }
+      ],
+      "base": {
+        "kind": "LINE_NET"
+      },
+      "rounding": {
+        "mode": "HALF_UP",
+        "scale": 2,
+        "basis": "LINE"
+      },
+      "jurisdiction": "jurisdiction:us-nc-swain-county",
+      "name": "Swain County local sales tax on equipment (North Carolina)",
+      "emit": "US_NC_COUNTY_SALES_TAX",
+      "versions": [
+        {
+          "from": "2022-01-01",
+          "kind": "AD_VALOREM",
+          "rate": "0.0225",
+          "source": "SRC-ZOIKO-US-NC-COUNTY-2026",
+          "citation": "Swain County local sales and use tax 2.25% on retail sales of tangible personal property sourced to the county, on top of the 4.75% State rate. NCDOR total general State, local and transit rates (historical table; current table effective July 1, 2026). Not applied to telecommunications service, which bears the 7% combined general rate collected by the State. https://www.ncdor.gov/taxes-forms/sales-and-use-tax/sales-and-use-tax-rates/historical-total-general-state-local-and-transit-sales-and-use-tax-rates"
+        }
+      ]
+    },
+    {
+      "id": "us-nc-transylvania-county.local-goods",
+      "regime": "regime:us-state-taxes",
+      "authority": "authority:us-nc-dor",
+      "taxType": "SALES_TAX",
+      "services": [
+        "EQUIPMENT_SALE"
+      ],
+      "applies": [
+        {
+          "supply": "DOMESTIC",
+          "treatment": "CUSTOMER_CHARGE",
+          "responsibility": "seller-collects"
+        }
+      ],
+      "base": {
+        "kind": "LINE_NET"
+      },
+      "rounding": {
+        "mode": "HALF_UP",
+        "scale": 2,
+        "basis": "LINE"
+      },
+      "jurisdiction": "jurisdiction:us-nc-transylvania-county",
+      "name": "Transylvania County local sales tax on equipment (North Carolina)",
+      "emit": "US_NC_COUNTY_SALES_TAX",
+      "versions": [
+        {
+          "from": "2022-01-01",
+          "kind": "AD_VALOREM",
+          "rate": "0.02",
+          "source": "SRC-ZOIKO-US-NC-COUNTY-2026",
+          "citation": "Transylvania County local sales and use tax 2.00% on retail sales of tangible personal property sourced to the county, on top of the 4.75% State rate. NCDOR total general State, local and transit rates (historical table; current table effective July 1, 2026). Not applied to telecommunications service, which bears the 7% combined general rate collected by the State. https://www.ncdor.gov/taxes-forms/sales-and-use-tax/sales-and-use-tax-rates/historical-total-general-state-local-and-transit-sales-and-use-tax-rates"
+        }
+      ]
+    },
+    {
+      "id": "us-nc-tyrrell-county.local-goods",
+      "regime": "regime:us-state-taxes",
+      "authority": "authority:us-nc-dor",
+      "taxType": "SALES_TAX",
+      "services": [
+        "EQUIPMENT_SALE"
+      ],
+      "applies": [
+        {
+          "supply": "DOMESTIC",
+          "treatment": "CUSTOMER_CHARGE",
+          "responsibility": "seller-collects"
+        }
+      ],
+      "base": {
+        "kind": "LINE_NET"
+      },
+      "rounding": {
+        "mode": "HALF_UP",
+        "scale": 2,
+        "basis": "LINE"
+      },
+      "jurisdiction": "jurisdiction:us-nc-tyrrell-county",
+      "name": "Tyrrell County local sales tax on equipment (North Carolina)",
+      "emit": "US_NC_COUNTY_SALES_TAX",
+      "versions": [
+        {
+          "from": "2022-01-01",
+          "kind": "AD_VALOREM",
+          "rate": "0.02",
+          "source": "SRC-ZOIKO-US-NC-COUNTY-2026",
+          "citation": "Tyrrell County local sales and use tax 2.00% on retail sales of tangible personal property sourced to the county, on top of the 4.75% State rate. NCDOR total general State, local and transit rates (historical table; current table effective July 1, 2026). Not applied to telecommunications service, which bears the 7% combined general rate collected by the State. https://www.ncdor.gov/taxes-forms/sales-and-use-tax/sales-and-use-tax-rates/historical-total-general-state-local-and-transit-sales-and-use-tax-rates"
+        }
+      ]
+    },
+    {
+      "id": "us-nc-union-county.local-goods",
+      "regime": "regime:us-state-taxes",
+      "authority": "authority:us-nc-dor",
+      "taxType": "SALES_TAX",
+      "services": [
+        "EQUIPMENT_SALE"
+      ],
+      "applies": [
+        {
+          "supply": "DOMESTIC",
+          "treatment": "CUSTOMER_CHARGE",
+          "responsibility": "seller-collects"
+        }
+      ],
+      "base": {
+        "kind": "LINE_NET"
+      },
+      "rounding": {
+        "mode": "HALF_UP",
+        "scale": 2,
+        "basis": "LINE"
+      },
+      "jurisdiction": "jurisdiction:us-nc-union-county",
+      "name": "Union County local sales tax on equipment (North Carolina)",
+      "emit": "US_NC_COUNTY_SALES_TAX",
+      "versions": [
+        {
+          "from": "2022-01-01",
+          "kind": "AD_VALOREM",
+          "rate": "0.02",
+          "source": "SRC-ZOIKO-US-NC-COUNTY-2026",
+          "citation": "Union County local sales and use tax 2.00% on retail sales of tangible personal property sourced to the county, on top of the 4.75% State rate. NCDOR total general State, local and transit rates (historical table; current table effective July 1, 2026). Not applied to telecommunications service, which bears the 7% combined general rate collected by the State. https://www.ncdor.gov/taxes-forms/sales-and-use-tax/sales-and-use-tax-rates/historical-total-general-state-local-and-transit-sales-and-use-tax-rates"
+        }
+      ]
+    },
+    {
+      "id": "us-nc-vance-county.local-goods",
+      "regime": "regime:us-state-taxes",
+      "authority": "authority:us-nc-dor",
+      "taxType": "SALES_TAX",
+      "services": [
+        "EQUIPMENT_SALE"
+      ],
+      "applies": [
+        {
+          "supply": "DOMESTIC",
+          "treatment": "CUSTOMER_CHARGE",
+          "responsibility": "seller-collects"
+        }
+      ],
+      "base": {
+        "kind": "LINE_NET"
+      },
+      "rounding": {
+        "mode": "HALF_UP",
+        "scale": 2,
+        "basis": "LINE"
+      },
+      "jurisdiction": "jurisdiction:us-nc-vance-county",
+      "name": "Vance County local sales tax on equipment (North Carolina)",
+      "emit": "US_NC_COUNTY_SALES_TAX",
+      "versions": [
+        {
+          "from": "2022-01-01",
+          "kind": "AD_VALOREM",
+          "rate": "0.02",
+          "source": "SRC-ZOIKO-US-NC-COUNTY-2026",
+          "citation": "Vance County local sales and use tax 2.00% on retail sales of tangible personal property sourced to the county, on top of the 4.75% State rate. NCDOR total general State, local and transit rates (historical table; current table effective July 1, 2026). Not applied to telecommunications service, which bears the 7% combined general rate collected by the State. https://www.ncdor.gov/taxes-forms/sales-and-use-tax/sales-and-use-tax-rates/historical-total-general-state-local-and-transit-sales-and-use-tax-rates"
+        }
+      ]
+    },
+    {
+      "id": "us-nc-wake-county.local-goods",
+      "regime": "regime:us-state-taxes",
+      "authority": "authority:us-nc-dor",
+      "taxType": "SALES_TAX",
+      "services": [
+        "EQUIPMENT_SALE"
+      ],
+      "applies": [
+        {
+          "supply": "DOMESTIC",
+          "treatment": "CUSTOMER_CHARGE",
+          "responsibility": "seller-collects"
+        }
+      ],
+      "base": {
+        "kind": "LINE_NET"
+      },
+      "rounding": {
+        "mode": "HALF_UP",
+        "scale": 2,
+        "basis": "LINE"
+      },
+      "jurisdiction": "jurisdiction:us-nc-wake-county",
+      "name": "Wake County local sales tax on equipment (North Carolina)",
+      "emit": "US_NC_COUNTY_SALES_TAX",
+      "versions": [
+        {
+          "from": "2022-01-01",
+          "kind": "AD_VALOREM",
+          "rate": "0.02",
+          "source": "SRC-ZOIKO-US-NC-COUNTY-2026",
+          "citation": "Wake County local sales and use tax 2.00% on retail sales of tangible personal property sourced to the county, on top of the 4.75% State rate; the county's 0.50% transit tax is a separate component. NCDOR total general State, local and transit rates (historical table; current table effective July 1, 2026). Not applied to telecommunications service, which bears the 7% combined general rate collected by the State. https://www.ncdor.gov/taxes-forms/sales-and-use-tax/sales-and-use-tax-rates/historical-total-general-state-local-and-transit-sales-and-use-tax-rates"
+        }
+      ]
+    },
+    {
+      "id": "us-nc-wake-county.transit-goods",
+      "regime": "regime:us-state-taxes",
+      "authority": "authority:us-nc-dor",
+      "taxType": "SALES_TAX",
+      "services": [
+        "EQUIPMENT_SALE"
+      ],
+      "applies": [
+        {
+          "supply": "DOMESTIC",
+          "treatment": "CUSTOMER_CHARGE",
+          "responsibility": "seller-collects"
+        }
+      ],
+      "base": {
+        "kind": "LINE_NET"
+      },
+      "rounding": {
+        "mode": "HALF_UP",
+        "scale": 2,
+        "basis": "LINE"
+      },
+      "jurisdiction": "jurisdiction:us-nc-wake-county",
+      "name": "Wake County transit sales tax on equipment (North Carolina)",
+      "emit": "US_NC_COUNTY_TRANSIT_TAX",
+      "versions": [
+        {
+          "from": "2022-01-01",
+          "kind": "AD_VALOREM",
+          "rate": "0.005",
+          "source": "SRC-ZOIKO-US-NC-COUNTY-2026",
+          "citation": "Wake County 0.50% transit sales and use tax on retail sales of tangible personal property sourced to the county; unchanged in every period of the NCDOR historical rate table (January 1, 2022 onward). https://www.ncdor.gov/taxes-forms/sales-and-use-tax/sales-and-use-tax-rates/historical-total-general-state-local-and-transit-sales-and-use-tax-rates"
+        }
+      ]
+    },
+    {
+      "id": "us-nc-warren-county.local-goods",
+      "regime": "regime:us-state-taxes",
+      "authority": "authority:us-nc-dor",
+      "taxType": "SALES_TAX",
+      "services": [
+        "EQUIPMENT_SALE"
+      ],
+      "applies": [
+        {
+          "supply": "DOMESTIC",
+          "treatment": "CUSTOMER_CHARGE",
+          "responsibility": "seller-collects"
+        }
+      ],
+      "base": {
+        "kind": "LINE_NET"
+      },
+      "rounding": {
+        "mode": "HALF_UP",
+        "scale": 2,
+        "basis": "LINE"
+      },
+      "jurisdiction": "jurisdiction:us-nc-warren-county",
+      "name": "Warren County local sales tax on equipment (North Carolina)",
+      "emit": "US_NC_COUNTY_SALES_TAX",
+      "versions": [
+        {
+          "from": "2022-01-01",
+          "kind": "AD_VALOREM",
+          "rate": "0.02",
+          "source": "SRC-ZOIKO-US-NC-COUNTY-2026",
+          "citation": "Warren County local sales and use tax 2.00% on retail sales of tangible personal property sourced to the county, on top of the 4.75% State rate. NCDOR total general State, local and transit rates (historical table; current table effective July 1, 2026). Not applied to telecommunications service, which bears the 7% combined general rate collected by the State. https://www.ncdor.gov/taxes-forms/sales-and-use-tax/sales-and-use-tax-rates/historical-total-general-state-local-and-transit-sales-and-use-tax-rates"
+        }
+      ]
+    },
+    {
+      "id": "us-nc-washington-county.local-goods",
+      "regime": "regime:us-state-taxes",
+      "authority": "authority:us-nc-dor",
+      "taxType": "SALES_TAX",
+      "services": [
+        "EQUIPMENT_SALE"
+      ],
+      "applies": [
+        {
+          "supply": "DOMESTIC",
+          "treatment": "CUSTOMER_CHARGE",
+          "responsibility": "seller-collects"
+        }
+      ],
+      "base": {
+        "kind": "LINE_NET"
+      },
+      "rounding": {
+        "mode": "HALF_UP",
+        "scale": 2,
+        "basis": "LINE"
+      },
+      "jurisdiction": "jurisdiction:us-nc-washington-county",
+      "name": "Washington County local sales tax on equipment (North Carolina)",
+      "emit": "US_NC_COUNTY_SALES_TAX",
+      "versions": [
+        {
+          "from": "2022-01-01",
+          "to": "2024-07-01",
+          "kind": "AD_VALOREM",
+          "rate": "0.02",
+          "source": "SRC-ZOIKO-US-NC-COUNTY-2026",
+          "citation": "Washington County local sales and use tax 2.00% on retail sales of tangible personal property sourced to the county, on top of the 4.75% State rate. NCDOR total general State, local and transit rates (historical table; current table effective July 1, 2026). Not applied to telecommunications service, which bears the 7% combined general rate collected by the State. https://www.ncdor.gov/taxes-forms/sales-and-use-tax/sales-and-use-tax-rates/historical-total-general-state-local-and-transit-sales-and-use-tax-rates"
+        },
+        {
+          "from": "2024-07-01",
+          "kind": "AD_VALOREM",
+          "rate": "0.0225",
+          "source": "SRC-ZOIKO-US-NC-COUNTY-2026",
+          "citation": "Washington County local sales and use tax 2.25% on retail sales of tangible personal property sourced to the county, on top of the 4.75% State rate. NCDOR total general State, local and transit rates (historical table; current table effective July 1, 2026). Not applied to telecommunications service, which bears the 7% combined general rate collected by the State. https://www.ncdor.gov/important-notice-local-sales-and-use-tax-rate-change-washington-county-04-18-2024"
+        }
+      ]
+    },
+    {
+      "id": "us-nc-watauga-county.local-goods",
+      "regime": "regime:us-state-taxes",
+      "authority": "authority:us-nc-dor",
+      "taxType": "SALES_TAX",
+      "services": [
+        "EQUIPMENT_SALE"
+      ],
+      "applies": [
+        {
+          "supply": "DOMESTIC",
+          "treatment": "CUSTOMER_CHARGE",
+          "responsibility": "seller-collects"
+        }
+      ],
+      "base": {
+        "kind": "LINE_NET"
+      },
+      "rounding": {
+        "mode": "HALF_UP",
+        "scale": 2,
+        "basis": "LINE"
+      },
+      "jurisdiction": "jurisdiction:us-nc-watauga-county",
+      "name": "Watauga County local sales tax on equipment (North Carolina)",
+      "emit": "US_NC_COUNTY_SALES_TAX",
+      "versions": [
+        {
+          "from": "2022-01-01",
+          "kind": "AD_VALOREM",
+          "rate": "0.02",
+          "source": "SRC-ZOIKO-US-NC-COUNTY-2026",
+          "citation": "Watauga County local sales and use tax 2.00% on retail sales of tangible personal property sourced to the county, on top of the 4.75% State rate. NCDOR total general State, local and transit rates (historical table; current table effective July 1, 2026). Not applied to telecommunications service, which bears the 7% combined general rate collected by the State. https://www.ncdor.gov/taxes-forms/sales-and-use-tax/sales-and-use-tax-rates/historical-total-general-state-local-and-transit-sales-and-use-tax-rates"
+        }
+      ]
+    },
+    {
+      "id": "us-nc-wayne-county.local-goods",
+      "regime": "regime:us-state-taxes",
+      "authority": "authority:us-nc-dor",
+      "taxType": "SALES_TAX",
+      "services": [
+        "EQUIPMENT_SALE"
+      ],
+      "applies": [
+        {
+          "supply": "DOMESTIC",
+          "treatment": "CUSTOMER_CHARGE",
+          "responsibility": "seller-collects"
+        }
+      ],
+      "base": {
+        "kind": "LINE_NET"
+      },
+      "rounding": {
+        "mode": "HALF_UP",
+        "scale": 2,
+        "basis": "LINE"
+      },
+      "jurisdiction": "jurisdiction:us-nc-wayne-county",
+      "name": "Wayne County local sales tax on equipment (North Carolina)",
+      "emit": "US_NC_COUNTY_SALES_TAX",
+      "versions": [
+        {
+          "from": "2022-01-01",
+          "kind": "AD_VALOREM",
+          "rate": "0.02",
+          "source": "SRC-ZOIKO-US-NC-COUNTY-2026",
+          "citation": "Wayne County local sales and use tax 2.00% on retail sales of tangible personal property sourced to the county, on top of the 4.75% State rate. NCDOR total general State, local and transit rates (historical table; current table effective July 1, 2026). Not applied to telecommunications service, which bears the 7% combined general rate collected by the State. https://www.ncdor.gov/taxes-forms/sales-and-use-tax/sales-and-use-tax-rates/historical-total-general-state-local-and-transit-sales-and-use-tax-rates"
+        }
+      ]
+    },
+    {
+      "id": "us-nc-wilkes-county.local-goods",
+      "regime": "regime:us-state-taxes",
+      "authority": "authority:us-nc-dor",
+      "taxType": "SALES_TAX",
+      "services": [
+        "EQUIPMENT_SALE"
+      ],
+      "applies": [
+        {
+          "supply": "DOMESTIC",
+          "treatment": "CUSTOMER_CHARGE",
+          "responsibility": "seller-collects"
+        }
+      ],
+      "base": {
+        "kind": "LINE_NET"
+      },
+      "rounding": {
+        "mode": "HALF_UP",
+        "scale": 2,
+        "basis": "LINE"
+      },
+      "jurisdiction": "jurisdiction:us-nc-wilkes-county",
+      "name": "Wilkes County local sales tax on equipment (North Carolina)",
+      "emit": "US_NC_COUNTY_SALES_TAX",
+      "versions": [
+        {
+          "from": "2022-01-01",
+          "kind": "AD_VALOREM",
+          "rate": "0.0225",
+          "source": "SRC-ZOIKO-US-NC-COUNTY-2026",
+          "citation": "Wilkes County local sales and use tax 2.25% on retail sales of tangible personal property sourced to the county, on top of the 4.75% State rate. NCDOR total general State, local and transit rates (historical table; current table effective July 1, 2026). Not applied to telecommunications service, which bears the 7% combined general rate collected by the State. https://www.ncdor.gov/taxes-forms/sales-and-use-tax/sales-and-use-tax-rates/historical-total-general-state-local-and-transit-sales-and-use-tax-rates"
+        }
+      ]
+    },
+    {
+      "id": "us-nc-wilson-county.local-goods",
+      "regime": "regime:us-state-taxes",
+      "authority": "authority:us-nc-dor",
+      "taxType": "SALES_TAX",
+      "services": [
+        "EQUIPMENT_SALE"
+      ],
+      "applies": [
+        {
+          "supply": "DOMESTIC",
+          "treatment": "CUSTOMER_CHARGE",
+          "responsibility": "seller-collects"
+        }
+      ],
+      "base": {
+        "kind": "LINE_NET"
+      },
+      "rounding": {
+        "mode": "HALF_UP",
+        "scale": 2,
+        "basis": "LINE"
+      },
+      "jurisdiction": "jurisdiction:us-nc-wilson-county",
+      "name": "Wilson County local sales tax on equipment (North Carolina)",
+      "emit": "US_NC_COUNTY_SALES_TAX",
+      "versions": [
+        {
+          "from": "2022-01-01",
+          "kind": "AD_VALOREM",
+          "rate": "0.02",
+          "source": "SRC-ZOIKO-US-NC-COUNTY-2026",
+          "citation": "Wilson County local sales and use tax 2.00% on retail sales of tangible personal property sourced to the county, on top of the 4.75% State rate. NCDOR total general State, local and transit rates (historical table; current table effective July 1, 2026). Not applied to telecommunications service, which bears the 7% combined general rate collected by the State. https://www.ncdor.gov/taxes-forms/sales-and-use-tax/sales-and-use-tax-rates/historical-total-general-state-local-and-transit-sales-and-use-tax-rates"
+        }
+      ]
+    },
+    {
+      "id": "us-nc-yadkin-county.local-goods",
+      "regime": "regime:us-state-taxes",
+      "authority": "authority:us-nc-dor",
+      "taxType": "SALES_TAX",
+      "services": [
+        "EQUIPMENT_SALE"
+      ],
+      "applies": [
+        {
+          "supply": "DOMESTIC",
+          "treatment": "CUSTOMER_CHARGE",
+          "responsibility": "seller-collects"
+        }
+      ],
+      "base": {
+        "kind": "LINE_NET"
+      },
+      "rounding": {
+        "mode": "HALF_UP",
+        "scale": 2,
+        "basis": "LINE"
+      },
+      "jurisdiction": "jurisdiction:us-nc-yadkin-county",
+      "name": "Yadkin County local sales tax on equipment (North Carolina)",
+      "emit": "US_NC_COUNTY_SALES_TAX",
+      "versions": [
+        {
+          "from": "2022-01-01",
+          "kind": "AD_VALOREM",
+          "rate": "0.02",
+          "source": "SRC-ZOIKO-US-NC-COUNTY-2026",
+          "citation": "Yadkin County local sales and use tax 2.00% on retail sales of tangible personal property sourced to the county, on top of the 4.75% State rate. NCDOR total general State, local and transit rates (historical table; current table effective July 1, 2026). Not applied to telecommunications service, which bears the 7% combined general rate collected by the State. https://www.ncdor.gov/taxes-forms/sales-and-use-tax/sales-and-use-tax-rates/historical-total-general-state-local-and-transit-sales-and-use-tax-rates"
+        }
+      ]
+    },
+    {
+      "id": "us-nc-yancey-county.local-goods",
+      "regime": "regime:us-state-taxes",
+      "authority": "authority:us-nc-dor",
+      "taxType": "SALES_TAX",
+      "services": [
+        "EQUIPMENT_SALE"
+      ],
+      "applies": [
+        {
+          "supply": "DOMESTIC",
+          "treatment": "CUSTOMER_CHARGE",
+          "responsibility": "seller-collects"
+        }
+      ],
+      "base": {
+        "kind": "LINE_NET"
+      },
+      "rounding": {
+        "mode": "HALF_UP",
+        "scale": 2,
+        "basis": "LINE"
+      },
+      "jurisdiction": "jurisdiction:us-nc-yancey-county",
+      "name": "Yancey County local sales tax on equipment (North Carolina)",
+      "emit": "US_NC_COUNTY_SALES_TAX",
+      "versions": [
+        {
+          "from": "2022-01-01",
+          "kind": "AD_VALOREM",
+          "rate": "0.02",
+          "source": "SRC-ZOIKO-US-NC-COUNTY-2026",
+          "citation": "Yancey County local sales and use tax 2.00% on retail sales of tangible personal property sourced to the county, on top of the 4.75% State rate. NCDOR total general State, local and transit rates (historical table; current table effective July 1, 2026). Not applied to telecommunications service, which bears the 7% combined general rate collected by the State. https://www.ncdor.gov/taxes-forms/sales-and-use-tax/sales-and-use-tax-rates/historical-total-general-state-local-and-transit-sales-and-use-tax-rates"
         }
       ]
     },
